@@ -1,0 +1,58 @@
+mod audit;
+mod auth;
+mod config;
+mod error;
+mod handlers;
+mod markdown;
+mod models;
+mod routes;
+mod state;
+
+use std::{net::SocketAddr, sync::Arc};
+
+use anyhow::Context;
+use sqlx::postgres::PgPoolOptions;
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+
+use crate::{config::Config, state::AppState};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with(fmt::layer())
+        .init();
+
+    let config = Config::from_env()?;
+    tracing::info!("starting blog backend on {}", config.bind_addr);
+
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&config.database_url)
+        .await
+        .context("connecting to database")?;
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .context("running migrations")?;
+
+    let state = AppState {
+        db: pool,
+        jwt_secret: Arc::new(config.jwt_secret.clone()),
+    };
+
+    let app = routes::build(state, &config);
+
+    let listener = tokio::net::TcpListener::bind(&config.bind_addr)
+        .await
+        .with_context(|| format!("binding {}", config.bind_addr))?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
+    Ok(())
+}
