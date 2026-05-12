@@ -1,11 +1,14 @@
 pub mod admin_audit;
 pub mod admin_comments;
 pub mod admin_data;
+pub mod admin_dict;
 pub mod admin_posts;
 pub mod admin_stats;
+pub mod admin_tags;
 pub mod admin_users;
 pub mod auth;
 pub mod comments;
+pub mod dict;
 pub mod posts;
 pub mod search;
 pub mod tags;

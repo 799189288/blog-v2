@@ -1,6 +1,6 @@
-use axum::{Json, extract::State};
+use axum::{Json, extract::{Path, State}};
 
-use crate::{error::AppResult, models::tag::TagWithCount, state::AppState};
+use crate::{error::{AppError, AppResult}, models::tag::{Tag, TagWithCount}, state::AppState};
 
 pub async fn list_with_counts(State(state): State<AppState>) -> AppResult<Json<Vec<TagWithCount>>> {
     let rows = sqlx::query_as::<_, TagWithCount>(
@@ -16,4 +16,18 @@ pub async fn list_with_counts(State(state): State<AppState>) -> AppResult<Json<V
     .fetch_all(&state.db)
     .await?;
     Ok(Json(rows))
+}
+
+pub async fn get_by_slug(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+) -> AppResult<Json<Tag>> {
+    let row = sqlx::query_as::<_, Tag>(
+        r#"SELECT id, name, slug FROM tags WHERE slug = $1"#,
+    )
+    .bind(&slug)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(Json(row))
 }

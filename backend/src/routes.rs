@@ -22,6 +22,8 @@ pub fn build(state: AppState, config: &Config) -> Router {
         .route("/posts/:slug/comments", get(handlers::comments::list_approved))
         .route("/posts/:slug/comments", post(handlers::comments::submit))
         .route("/tags", get(handlers::tags::list_with_counts))
+        .route("/tags/:slug", get(handlers::tags::get_by_slug))
+        .route("/dict/:type_code", get(handlers::dict::get_by_type))
         .route("/search", get(handlers::search::search))
         .route("/auth/login", post(handlers::auth::login))
         .route("/health", get(health));
@@ -35,6 +37,20 @@ pub fn build(state: AppState, config: &Config) -> Router {
         .route("/comments", get(handlers::admin_comments::list))
         .route("/comments/:id", patch(handlers::admin_comments::set_status))
         .route("/comments/:id", delete(handlers::admin_comments::delete))
+        // tag management
+        .route("/tags", get(handlers::admin_tags::list))
+        .route("/tags", post(handlers::admin_tags::create))
+        .route("/tags/:id", put(handlers::admin_tags::update))
+        .route("/tags/:id", delete(handlers::admin_tags::delete))
+        // dictionary management
+        .route("/dict/types", get(handlers::admin_dict::list_types))
+        .route("/dict/types", post(handlers::admin_dict::create_type))
+        .route("/dict/types/:id", put(handlers::admin_dict::update_type))
+        .route("/dict/types/:id", delete(handlers::admin_dict::delete_type))
+        .route("/dict/types/:id/items", get(handlers::admin_dict::list_items))
+        .route("/dict/types/:id/items", post(handlers::admin_dict::create_item))
+        .route("/dict/items/:id", put(handlers::admin_dict::update_item))
+        .route("/dict/items/:id", delete(handlers::admin_dict::delete_item))
         // stats
         .route("/stats/overview", get(handlers::admin_stats::overview))
         .route("/stats/trend", get(handlers::admin_stats::trend))
