@@ -1,23 +1,37 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { NSpin, NTag, NSpace, NDivider } from 'naive-ui'
 import { RouterLink, useRoute } from 'vue-router'
+import { MdPreview, config } from 'md-editor-v3'
+import mermaid from 'mermaid'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as postsApi from '../api/posts'
 import * as commentsApi from '../api/comments'
-import PostContent from '../components/PostContent.vue'
 import CommentList from '../components/CommentList.vue'
 import CommentForm from '../components/CommentForm.vue'
 import BackButton from '../components/BackButton.vue'
 import type { PostDetail, Comment } from '../types'
 
+config({
+  editorExtensions: {
+    mermaid: { instance: mermaid },
+  },
+})
+
 const props = defineProps<{ slug: string }>()
 const route = useRoute()
+const { locale } = useI18n()
 
 const post = ref<PostDetail | null>(null)
 const comments = ref<Comment[]>([])
 const loading = ref(true)
 const notFound = ref(false)
+
+const editorLang = computed<'zh-CN' | 'en-US'>(() => (locale.value === 'zh' ? 'zh-CN' : 'en-US'))
+const editorTheme = computed<'light' | 'dark'>(() =>
+  window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+)
 
 async function load() {
   loading.value = true
@@ -44,7 +58,7 @@ async function reloadComments() {
 <template>
   <BackButton />
   <NSpin :show="loading">
-    <div v-if="notFound" class="not-found">Post not found.</div>
+    <div v-if="notFound" class="not-found">{{ $t('post.notFound') }}</div>
     <article v-else-if="post">
       <h1>{{ post.title }}</h1>
       <div class="meta">
@@ -60,16 +74,22 @@ async function reloadComments() {
           </RouterLink>
         </NSpace>
       </div>
-      <PostContent :html="post.content_html" />
+      <MdPreview
+        :model-value="post.content_md"
+        :language="editorLang"
+        :theme="editorTheme"
+        preview-theme="default"
+        class="post-md-preview"
+      />
 
       <NDivider />
 
-      <h3>Comments ({{ comments.length }})</h3>
-      <CommentList :comments="comments" />
+      <h3>{{ $t('post.comments', { count: comments.length }) }}</h3>
+      <CommentList :comments="comments" :slug="post.slug" @submitted="reloadComments" />
 
       <NDivider />
 
-      <h3>Leave a comment</h3>
+      <h3>{{ $t('post.leaveComment') }}</h3>
       <CommentForm :slug="post.slug" @submitted="reloadComments" />
     </article>
   </NSpin>
@@ -77,6 +97,13 @@ async function reloadComments() {
 
 <style scoped>
 .meta { font-size: 13px; opacity: 0.7; margin-bottom: 24px; display: flex; align-items: center; }
-.tag-link { text-decoration: none; }
+.tag-link { text-decoration: none; cursor: pointer; }
+.tag-link :deep(.n-tag) { cursor: pointer; }
 .not-found { padding: 60px 0; text-align: center; opacity: 0.6; }
+.post-md-preview {
+  background: transparent !important;
+}
+.post-md-preview :deep(.md-editor-preview-wrapper) {
+  padding: 0;
+}
 </style>
