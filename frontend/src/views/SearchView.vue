@@ -50,13 +50,13 @@ watch(() => route.query.q, val => {
 
 <template>
   <BackButton />
-  <h2>Search</h2>
+  <h2>{{ $t('search.title') }}</h2>
   <div style="display: flex; gap: 8px; max-width: 480px; margin-bottom: 16px;">
-    <NInput v-model:value="q" placeholder="Keywords..." @keyup.enter="onSubmit" />
-    <NButton type="primary" @click="onSubmit">Search</NButton>
+    <NInput v-model:value="q" :placeholder="$t('search.keywordsPlaceholder')" @keyup.enter="onSubmit" />
+    <NButton type="primary" @click="onSubmit">{{ $t('common.search') }}</NButton>
   </div>
   <NSpin :show="loading">
-    <NEmpty v-if="!loading && hasQuery && posts.length === 0" description="No results" />
+    <NEmpty v-if="!loading && hasQuery && posts.length === 0" :description="$t('search.noResults')" />
     <PostCard v-for="p in posts" :key="p.id" :post="p" />
     <div v-if="total > perPage" style="display: flex; justify-content: center; margin-top: 24px;">
       <NPagination

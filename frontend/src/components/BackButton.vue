@@ -1,13 +1,18 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 
 const props = withDefaults(
   defineProps<{ label?: string; fallback?: string }>(),
-  { label: 'Back', fallback: '/' },
+  { label: '', fallback: '/' },
 )
 
 const router = useRouter()
+const { t } = useI18n()
+
+const displayLabel = computed(() => props.label || t('common.back'))
 
 function go() {
   if (window.history.state?.back) {
@@ -21,7 +26,7 @@ function go() {
 <template>
   <NButton text @click="go" class="back-btn">
     <span class="arrow">←</span>
-    {{ label }}
+    {{ displayLabel }}
   </NButton>
 </template>
 

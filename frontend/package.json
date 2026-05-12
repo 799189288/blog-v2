@@ -11,9 +11,11 @@
   "dependencies": {
     "axios": "^1.7.7",
     "dayjs": "^1.11.13",
-    "highlight.js": "^11.10.0",
+    "md-editor-v3": "^6.5.0",
+    "mermaid": "^11.15.0",
     "naive-ui": "^2.40.4",
     "vue": "^3.5.32",
+    "vue-i18n": "^10.0.7",
     "vue-router": "^4.4.5"
   },
   "devDependencies": {

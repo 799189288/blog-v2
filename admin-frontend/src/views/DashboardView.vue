@@ -2,10 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { NCard, NGrid, NGridItem, NStatistic, NRadioGroup, NRadioButton, NSpin } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as statsApi from '../api/stats'
 import type { Overview, Trend } from '../types'
 
+const { t } = useI18n()
 const overview = ref<Overview | null>(null)
 const trend = ref<Trend | null>(null)
 const days = ref<number>(30)
@@ -14,9 +16,9 @@ const loading = ref(false)
 async function load() {
   loading.value = true
   try {
-    const [o, t] = await Promise.all([statsApi.overview(), statsApi.trend(days.value)])
+    const [o, tr] = await Promise.all([statsApi.overview(), statsApi.trend(days.value)])
     overview.value = o
-    trend.value = t
+    trend.value = tr
   } finally {
     loading.value = false
   }
@@ -49,51 +51,51 @@ function chartOption(title: string, points: { date: string; count: number }[] | 
   }
 }
 
-const postsOption = computed(() => chartOption('Posts published / day', trend.value?.posts, '#18a058'))
-const commentsOption = computed(() => chartOption('Comments / day', trend.value?.comments, '#2080f0'))
+const postsOption = computed(() => chartOption(t('dashboard.chartPostsPublished'), trend.value?.posts, '#18a058'))
+const commentsOption = computed(() => chartOption(t('dashboard.chartComments'), trend.value?.comments, '#2080f0'))
 </script>
 
 <template>
   <NSpin :show="loading">
-    <h2 style="margin-top: 0">Overview</h2>
+    <h2 style="margin-top: 0">{{ t('dashboard.overview') }}</h2>
 
     <NGrid :x-gap="16" :y-gap="16" :cols="5" responsive="screen" item-responsive>
       <NGridItem span="5 m:1">
         <NCard>
-          <NStatistic label="Posts (total)" :value="overview?.posts.total ?? 0" />
-          <div class="sub">{{ overview?.posts.published ?? 0 }} published · {{ overview?.posts.draft ?? 0 }} draft</div>
+          <NStatistic :label="t('dashboard.postsTotal')" :value="overview?.posts.total ?? 0" />
+          <div class="sub">{{ t('dashboard.postsBreakdown', { published: overview?.posts.published ?? 0, draft: overview?.posts.draft ?? 0 }) }}</div>
         </NCard>
       </NGridItem>
       <NGridItem span="5 m:1">
         <NCard>
-          <NStatistic label="Comments" :value="overview?.comments.total ?? 0" />
-          <div class="sub">{{ overview?.comments.approved ?? 0 }} approved · {{ overview?.comments.pending ?? 0 }} pending · {{ overview?.comments.spam ?? 0 }} spam</div>
+          <NStatistic :label="t('dashboard.comments')" :value="overview?.comments.total ?? 0" />
+          <div class="sub">{{ t('dashboard.commentsBreakdown', { approved: overview?.comments.approved ?? 0, pending: overview?.comments.pending ?? 0, spam: overview?.comments.spam ?? 0 }) }}</div>
         </NCard>
       </NGridItem>
       <NGridItem span="5 m:1">
         <NCard>
-          <NStatistic label="Pending comments" :value="overview?.comments.pending ?? 0" />
-          <div class="sub">need moderation</div>
+          <NStatistic :label="t('dashboard.pendingComments')" :value="overview?.comments.pending ?? 0" />
+          <div class="sub">{{ t('dashboard.needModeration') }}</div>
         </NCard>
       </NGridItem>
       <NGridItem span="5 m:1">
         <NCard>
-          <NStatistic label="Tags" :value="overview?.tags.total ?? 0" />
+          <NStatistic :label="t('dashboard.tags')" :value="overview?.tags.total ?? 0" />
         </NCard>
       </NGridItem>
       <NGridItem span="5 m:1">
         <NCard>
-          <NStatistic label="Admin users" :value="overview?.users.total ?? 0" />
+          <NStatistic :label="t('dashboard.adminUsers')" :value="overview?.users.total ?? 0" />
         </NCard>
       </NGridItem>
     </NGrid>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin: 24px 0 12px;">
-      <h3 style="margin: 0">Trend</h3>
+      <h3 style="margin: 0">{{ t('dashboard.trend') }}</h3>
       <NRadioGroup v-model:value="days" size="small">
-        <NRadioButton :value="7">7d</NRadioButton>
-        <NRadioButton :value="30">30d</NRadioButton>
-        <NRadioButton :value="90">90d</NRadioButton>
+        <NRadioButton :value="7">{{ t('dashboard.days7') }}</NRadioButton>
+        <NRadioButton :value="30">{{ t('dashboard.days30') }}</NRadioButton>
+        <NRadioButton :value="90">{{ t('dashboard.days90') }}</NRadioButton>
       </NRadioGroup>
     </div>
 

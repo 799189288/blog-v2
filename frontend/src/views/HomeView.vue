@@ -35,7 +35,7 @@ onMounted(async () => {
   <div class="home">
     <div class="posts">
       <NSpin :show="loading">
-        <NEmpty v-if="!loading && posts.length === 0" description="No posts yet" />
+        <NEmpty v-if="!loading && posts.length === 0" :description="$t('home.emptyPosts')" />
         <PostCard v-for="p in posts" :key="p.id" :post="p" />
         <div v-if="total > perPage" style="display: flex; justify-content: center; margin-top: 24px;">
           <NPagination
@@ -48,7 +48,7 @@ onMounted(async () => {
       </NSpin>
     </div>
     <aside class="sidebar">
-      <h3>Tags</h3>
+      <h3>{{ $t('home.tags') }}</h3>
       <ul class="tag-list">
         <li v-for="t in tags" :key="t.id">
           <RouterLink :to="{ name: 'tag', params: { slug: t.slug } }">

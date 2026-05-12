@@ -1,14 +1,28 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NInput } from 'naive-ui'
-import { ref } from 'vue'
+import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NInput, NDropdown } from 'naive-ui'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { setLocale, type Locale } from '../i18n'
 
 const router = useRouter()
 const query = ref('')
+const { t, locale } = useI18n()
 
 function onSearch() {
   const q = query.value.trim()
   if (q) router.push({ name: 'search', query: { q } })
+}
+
+const langOptions = computed(() => [
+  { key: 'en', label: t('language.en') },
+  { key: 'zh', label: t('language.zh') },
+])
+
+const currentLangLabel = computed(() => (locale.value === 'zh' ? t('language.zh') : t('language.en')))
+
+function onLangSelect(key: string) {
+  setLocale(key as Locale)
 }
 </script>
 
@@ -16,15 +30,20 @@ function onSearch() {
   <NLayout class="root-layout">
     <NLayoutHeader bordered style="padding: 14px 24px;">
       <div class="header-inner">
-        <RouterLink :to="{ name: 'home' }" class="brand">Home</RouterLink>
-        <NInput
-          v-model:value="query"
-          placeholder="Search posts..."
-          clearable
-          size="small"
-          style="width: 220px"
-          @keyup.enter="onSearch"
-        />
+        <RouterLink :to="{ name: 'home' }" class="brand">{{ t('layout.brand') }}</RouterLink>
+        <div class="header-right">
+          <NInput
+            v-model:value="query"
+            :placeholder="t('layout.searchPlaceholder')"
+            clearable
+            size="small"
+            style="width: 220px"
+            @keyup.enter="onSearch"
+          />
+          <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
+            <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
+          </NDropdown>
+        </div>
       </div>
     </NLayoutHeader>
 
@@ -61,10 +80,27 @@ function onSearch() {
   justify-content: space-between;
   align-items: center;
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .brand {
   font-weight: 600;
   font-size: 18px;
   text-decoration: none;
+}
+.lang-btn {
+  background: transparent;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.lang-btn:hover {
+  border-color: rgba(127, 127, 127, 0.6);
 }
 .content-wrap {
   max-width: 960px;
