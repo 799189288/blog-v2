@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { h, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import {
   NRadioGroup, NRadioButton, NDataTable, NTag, NButton, NSpace, useDialog, useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as commentsApi from '../../api/comments'
 import type { Comment } from '../../types'
+import { useDictStore } from '../../stores/dict'
 
 const dialog = useDialog()
 const message = useMessage()
+const { t } = useI18n()
+const dict = useDictStore()
 
 const status = ref<'pending' | 'approved' | 'spam' | 'all'>('pending')
 const rows = ref<Comment[]>([])
@@ -24,70 +28,81 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await dict.ensure('comment.status')
+  await load()
+})
 watch(status, load)
 
 async function setStatus(c: Comment, next: 'approved' | 'spam' | 'pending') {
   try {
     await commentsApi.adminSetStatus(c.id, next)
-    message.success(`Comment ${next}`)
+    message.success(t('moderation.statusUpdated', { status: dict.label('comment.status', next) }))
     await load()
   } catch (e: any) {
-    message.error(e?.response?.data?.error ?? 'Failed')
+    message.error(e?.response?.data?.error ?? t('common.failed'))
   }
 }
 
 function confirmDelete(c: Comment) {
   dialog.warning({
-    title: 'Delete comment',
-    content: 'Permanently delete this comment?',
-    positiveText: 'Delete',
-    negativeText: 'Cancel',
+    title: t('moderation.deleteTitle'),
+    content: t('moderation.deleteConfirm'),
+    positiveText: t('common.confirmDelete'),
+    negativeText: t('common.cancel'),
     onPositiveClick: async () => {
       try {
         await commentsApi.adminDelete(c.id)
-        message.success('Deleted')
+        message.success(t('common.deleted'))
         await load()
       } catch (e: any) {
-        message.error(e?.response?.data?.error ?? 'Delete failed')
+        message.error(e?.response?.data?.error ?? t('common.deleteFailed'))
       }
     },
   })
 }
 
-const columns: DataTableColumns<Comment> = [
-  { title: 'Author', key: 'author_name', width: 160 },
-  { title: 'Email', key: 'author_email', width: 200 },
-  { title: 'Content', key: 'content', render(r) { return h('div', { style: 'white-space: pre-wrap' }, r.content) } },
+const columns = computed<DataTableColumns<Comment>>(() => [
+  { title: t('moderation.cols.author'), key: 'author_name', width: 140 },
+  { title: t('moderation.cols.email'), key: 'author_email', width: 180 },
   {
-    title: 'Status', key: 'status', width: 110,
+    title: t('moderation.cols.replyTo'), key: 'parent_author_name', width: 140,
     render(r) {
-      const type = r.status === 'approved' ? 'success' : r.status === 'spam' ? 'error' : 'warning'
-      return h(NTag, { type, size: 'small' }, () => r.status)
+      if (!r.parent_id) return h('span', { style: 'opacity:.4' }, '—')
+      const name = r.parent_author_name ?? `#${r.parent_id}`
+      return h('span', null, `@${name}`)
     },
   },
-  { title: 'When', key: 'created_at', width: 140, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm') },
+  { title: t('moderation.cols.content'), key: 'content', render(r) { return h('div', { style: 'white-space: pre-wrap' }, r.content) } },
   {
-    title: 'Actions', key: 'actions', width: 260,
+    title: t('moderation.cols.status'), key: 'status', width: 110,
+    render(r) {
+      const type = r.status === 'approved' ? 'success' : r.status === 'spam' ? 'error' : 'warning'
+      return h(NTag, { type, size: 'small' }, () => dict.label('comment.status', r.status))
+    },
+  },
+  { title: t('moderation.cols.when'), key: 'created_at', width: 140, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm') },
+  {
+    title: t('moderation.cols.actions'), key: 'actions', width: 260,
     render(r) {
       return h(NSpace, { size: 'small' }, () => [
-        r.status !== 'approved' && h(NButton, { size: 'small', type: 'primary', onClick: () => setStatus(r, 'approved') }, () => 'Approve'),
-        r.status !== 'spam' && h(NButton, { size: 'small', onClick: () => setStatus(r, 'spam') }, () => 'Spam'),
-        h(NButton, { size: 'small', type: 'error', ghost: true, onClick: () => confirmDelete(r) }, () => 'Delete'),
+        r.status !== 'approved' && h(NButton, { size: 'small', type: 'primary', onClick: () => setStatus(r, 'approved') }, () => t('moderation.approve')),
+        r.status !== 'spam' && h(NButton, { size: 'small', onClick: () => setStatus(r, 'spam') }, () => t('moderation.markSpam')),
+        h(NButton, { size: 'small', type: 'error', ghost: true, onClick: () => confirmDelete(r) }, () => t('common.delete')),
       ].filter(Boolean) as any)
     },
   },
-]
+])
 </script>
 
 <template>
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h2 style="margin: 0">Comment moderation</h2>
+    <h2 style="margin: 0">{{ t('moderation.title') }}</h2>
     <NRadioGroup v-model:value="status" size="small">
-      <NRadioButton value="pending">Pending</NRadioButton>
-      <NRadioButton value="approved">Approved</NRadioButton>
-      <NRadioButton value="spam">Spam</NRadioButton>
-      <NRadioButton value="all">All</NRadioButton>
+      <NRadioButton value="pending">{{ t('moderation.statuses.pending') }}</NRadioButton>
+      <NRadioButton value="approved">{{ t('moderation.statuses.approved') }}</NRadioButton>
+      <NRadioButton value="spam">{{ t('moderation.statuses.spam') }}</NRadioButton>
+      <NRadioButton value="all">{{ t('moderation.statuses.all') }}</NRadioButton>
     </NRadioGroup>
   </div>
   <NDataTable :columns="columns" :data="rows" :loading="loading" :row-key="(r: Comment) => r.id" />

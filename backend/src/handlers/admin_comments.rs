@@ -3,9 +3,11 @@ use axum::{
     extract::{ConnectInfo, Path, Query, State},
     http::StatusCode,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sqlx::FromRow;
 use std::net::SocketAddr;
+use time::OffsetDateTime;
 use validator::Validate;
 
 use crate::{
@@ -21,25 +23,54 @@ pub struct ListQuery {
     pub status: Option<String>,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+pub struct AdminCommentRow {
+    pub id: i64,
+    pub post_id: i64,
+    pub parent_id: Option<i64>,
+    pub parent_author_name: Option<String>,
+    pub author_name: String,
+    pub author_email: Option<String>,
+    pub content: String,
+    pub status: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+}
+
 pub async fn list(
     State(state): State<AppState>,
     _user: AuthUser,
     Query(q): Query<ListQuery>,
-) -> AppResult<Json<Vec<Comment>>> {
+) -> AppResult<Json<Vec<AdminCommentRow>>> {
     let rows = if let Some(status) = q.status.as_deref() {
         if !["pending", "approved", "spam"].contains(&status) {
             return Err(AppError::BadRequest("invalid status filter".into()));
         }
-        sqlx::query_as::<_, Comment>(
-            r#"SELECT * FROM comments WHERE status = $1 ORDER BY created_at DESC"#,
+        sqlx::query_as::<_, AdminCommentRow>(
+            r#"
+            SELECT c.id, c.post_id, c.parent_id, p.author_name AS parent_author_name,
+                   c.author_name, c.author_email, c.content, c.status, c.created_at
+            FROM comments c
+            LEFT JOIN comments p ON p.id = c.parent_id
+            WHERE c.status = $1
+            ORDER BY c.created_at DESC
+            "#,
         )
         .bind(status)
         .fetch_all(&state.db)
         .await?
     } else {
-        sqlx::query_as::<_, Comment>(r#"SELECT * FROM comments ORDER BY created_at DESC"#)
-            .fetch_all(&state.db)
-            .await?
+        sqlx::query_as::<_, AdminCommentRow>(
+            r#"
+            SELECT c.id, c.post_id, c.parent_id, p.author_name AS parent_author_name,
+                   c.author_name, c.author_email, c.content, c.status, c.created_at
+            FROM comments c
+            LEFT JOIN comments p ON p.id = c.parent_id
+            ORDER BY c.created_at DESC
+            "#,
+        )
+        .fetch_all(&state.db)
+        .await?
     };
     Ok(Json(rows))
 }

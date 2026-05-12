@@ -55,6 +55,7 @@ export interface CommentBrowseRow {
   id: number
   post_id: number
   parent_id: number | null
+  parent_author_name: string | null
   author_name: string
   author_email: string | null
   content: string
@@ -67,9 +68,7 @@ export interface TagBrowseRow {
   name: string
   slug: string
   post_count: number
-}
-
-export interface AuditRow {
+}export interface AuditRow {
   id: number
   user_id: number | null
   username: string
@@ -119,6 +118,7 @@ export interface Comment {
   id: number
   post_id: number
   parent_id: number | null
+  parent_author_name: string | null
   author_name: string
   author_email: string | null
   content: string

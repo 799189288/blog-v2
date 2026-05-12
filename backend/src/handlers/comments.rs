@@ -46,20 +46,26 @@ pub async fn submit(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    if let Some(parent_id) = input.parent_id {
-        let exists: Option<i64> = sqlx::query_scalar(
-            r#"SELECT id FROM comments WHERE id = $1 AND post_id = $2 AND status = 'approved'"#,
+    let effective_parent_id = if let Some(parent_id) = input.parent_id {
+        let parent: Option<(i64, Option<i64>)> = sqlx::query_as(
+            r#"SELECT id, parent_id FROM comments WHERE id = $1 AND post_id = $2 AND status = 'approved'"#,
         )
         .bind(parent_id)
         .bind(post_id)
         .fetch_optional(&state.db)
         .await?;
-        if exists.is_none() {
-            return Err(AppError::BadRequest(
-                "parent comment not found or not approved".into(),
-            ));
+        match parent {
+            None => {
+                return Err(AppError::BadRequest(
+                    "parent comment not found or not approved".into(),
+                ));
+            }
+            Some((_, Some(grandparent_id))) => Some(grandparent_id),
+            Some((id, None)) => Some(id),
         }
-    }
+    } else {
+        None
+    };
 
     let row = sqlx::query_as::<_, Comment>(
         r#"
@@ -69,7 +75,7 @@ pub async fn submit(
         "#,
     )
     .bind(post_id)
-    .bind(input.parent_id)
+    .bind(effective_parent_id)
     .bind(&input.author_name)
     .bind(input.author_email.as_deref())
     .bind(&input.content)

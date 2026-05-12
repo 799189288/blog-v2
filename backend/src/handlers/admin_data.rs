@@ -125,6 +125,7 @@ pub struct CommentRow {
     pub id: i64,
     pub post_id: i64,
     pub parent_id: Option<i64>,
+    pub parent_author_name: Option<String>,
     pub author_name: String,
     pub author_email: Option<String>,
     pub content: String,
@@ -148,14 +149,20 @@ pub async fn comments(
     }
     let qpat = q.q.as_deref().map(|s| format!("%{}%", s.replace('%', "\\%")));
 
+    // Note: order by is on `c.<col>` after join — the allow-list keys are bare
+    // column names so we qualify them here.
+    let qualified_order = order.split_whitespace().collect::<Vec<_>>();
+    let (sort_col, sort_dir) = (qualified_order[0], qualified_order[1]);
     let items_sql = format!(
         r#"
-        SELECT id, post_id, parent_id, author_name, author_email, content, status, created_at
-        FROM comments
-        WHERE ($1::text IS NULL OR status = $1)
-          AND ($2::bigint IS NULL OR post_id = $2)
-          AND ($3::text IS NULL OR author_name ILIKE $3 OR content ILIKE $3)
-        ORDER BY {order}
+        SELECT c.id, c.post_id, c.parent_id, p.author_name AS parent_author_name,
+               c.author_name, c.author_email, c.content, c.status, c.created_at
+        FROM comments c
+        LEFT JOIN comments p ON p.id = c.parent_id
+        WHERE ($1::text IS NULL OR c.status = $1)
+          AND ($2::bigint IS NULL OR c.post_id = $2)
+          AND ($3::text IS NULL OR c.author_name ILIKE $3 OR c.content ILIKE $3)
+        ORDER BY c.{sort_col} {sort_dir}
         LIMIT $4 OFFSET $5
         "#,
     );
