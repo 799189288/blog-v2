@@ -41,5 +41,6 @@ defineProps<{ post: PostSummary }>()
 .title a:hover { text-decoration: underline; }
 .meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; }
 .excerpt { margin: 8px 0 0; }
-.tag-link { text-decoration: none; }
+.tag-link { text-decoration: none; cursor: pointer; }
+.tag-link :deep(.n-tag) { cursor: pointer; }
 </style>

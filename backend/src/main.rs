@@ -8,7 +8,7 @@ mod models;
 mod routes;
 mod state;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
@@ -39,10 +39,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("running migrations")?;
 
-    let state = AppState {
-        db: pool,
-        jwt_secret: Arc::new(config.jwt_secret.clone()),
-    };
+    let state = AppState::new(pool, config.jwt_secret.clone());
 
     let app = routes::build(state, &config);
 

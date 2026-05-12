@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import {
   NDataTable, NTag, NInput, NSelect, NSpace, NButton,
 } from 'naive-ui'
 import type { DataTableColumns, DataTableSortState } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as dataApi from '../../api/data'
 import type { PostBrowseRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
+import { useDictStore } from '../../stores/dict'
 
+const { t } = useI18n()
+const dict = useDictStore()
 const rows = ref<PostBrowseRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -20,10 +24,7 @@ const status = ref<string | null>(null)
 const drawer = ref(false)
 const detail = ref<unknown>(null)
 
-const statusOptions = [
-  { label: 'Draft', value: 'draft' },
-  { label: 'Published', value: 'published' },
-]
+const statusOptions = computed(() => dict.options('post.status').value)
 
 async function load() {
   loading.value = true
@@ -43,7 +44,10 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await dict.ensure('post.status')
+  await load()
+})
 
 function onSorterChange(s: DataTableSortState | null) {
   if (!s || !s.order) {
@@ -60,29 +64,29 @@ function openDetail(row: PostBrowseRow) {
   drawer.value = true
 }
 
-const columns: DataTableColumns<PostBrowseRow> = [
-  { title: 'ID', key: 'id', width: 70, sorter: true },
-  { title: 'Title', key: 'title', sorter: true, render: r => h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, r.title) },
-  { title: 'Slug', key: 'slug', ellipsis: { tooltip: true } },
+const columns = computed<DataTableColumns<PostBrowseRow>>(() => [
+  { title: t('dataPosts.cols.id'), key: 'id', width: 70, sorter: true },
+  { title: t('dataPosts.cols.title'), key: 'title', sorter: true, render: r => h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, r.title) },
+  { title: t('dataPosts.cols.slug'), key: 'slug', ellipsis: { tooltip: true } },
   {
-    title: 'Status', key: 'status', width: 110, sorter: true,
+    title: t('dataPosts.cols.status'), key: 'status', width: 110, sorter: true,
     render(r) {
-      return h(NTag, { type: r.status === 'published' ? 'success' : 'default', size: 'small' }, () => r.status)
+      return h(NTag, { type: r.status === 'published' ? 'success' : 'default', size: 'small' }, () => dict.label('post.status', r.status))
     },
   },
-  { title: 'Author', key: 'author_id', width: 90 },
-  { title: 'Published', key: 'published_at', width: 150, sorter: true, render: r => r.published_at ? dayjs(r.published_at).format('YYYY-MM-DD HH:mm') : '—' },
-  { title: 'Created', key: 'created_at', width: 150, sorter: true, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm') },
-]
+  { title: t('dataPosts.cols.author'), key: 'author_id', width: 90 },
+  { title: t('dataPosts.cols.published'), key: 'published_at', width: 150, sorter: true, render: r => r.published_at ? dayjs(r.published_at).format('YYYY-MM-DD HH:mm') : t('common.none') },
+  { title: t('dataPosts.cols.created'), key: 'created_at', width: 150, sorter: true, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm') },
+])
 </script>
 
 <template>
-  <h2 style="margin-top: 0">Posts</h2>
+  <h2 style="margin-top: 0">{{ t('dataPosts.title') }}</h2>
 
   <NSpace style="margin-bottom: 12px;" :size="12" align="center">
-    <NInput v-model:value="q" placeholder="Search title..." clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
-    <NSelect v-model:value="status" :options="statusOptions" placeholder="Status" style="width: 160px;" clearable @update:value="() => { page = 1; load() }" />
-    <NButton @click="load">Refresh</NButton>
+    <NInput v-model:value="q" :placeholder="t('dataPosts.searchPlaceholder')" clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
+    <NSelect v-model:value="status" :options="statusOptions" :placeholder="t('dataPosts.statusPlaceholder')" style="width: 160px;" clearable @update:value="() => { page = 1; load() }" />
+    <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
 
   <NDataTable
@@ -103,5 +107,5 @@ const columns: DataTableColumns<PostBrowseRow> = [
     @update:sorter="onSorterChange"
   />
 
-  <RowDetailDrawer v-model:show="drawer" title="Post row" :data="detail" />
+  <RowDetailDrawer v-model:show="drawer" :title="t('dataPosts.drawerTitle')" :data="detail" />
 </template>

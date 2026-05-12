@@ -5,11 +5,15 @@ import {
   NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, useMessage,
 } from 'naive-ui'
 import { MdEditor } from 'md-editor-v3'
+import { useI18n } from 'vue-i18n'
 import * as postsApi from '../../api/posts'
+import { useDictStore } from '../../stores/dict'
 
 const props = defineProps<{ id?: string }>()
 const router = useRouter()
 const message = useMessage()
+const { t } = useI18n()
+const dict = useDictStore()
 
 const isEdit = computed(() => !!props.id)
 const loading = ref(false)
@@ -24,10 +28,7 @@ const form = reactive({
   tags: [] as string[],
 })
 
-const statusOptions = [
-  { label: 'Draft', value: 'draft' },
-  { label: 'Published', value: 'published' },
-]
+const statusOptions = computed(() => dict.options('post.status').value)
 
 async function load() {
   if (!props.id) return
@@ -39,19 +40,22 @@ async function load() {
     form.excerpt = p.excerpt ?? ''
     form.content_md = p.content_md
     form.status = p.status
-    form.tags = p.tags.map(t => t.name)
+    form.tags = p.tags.map(tg => tg.name)
   } catch (e: any) {
-    message.error(e?.response?.data?.error ?? 'Failed to load post')
+    message.error(e?.response?.data?.error ?? t('postEdit.loadFailed'))
   } finally {
     loading.value = false
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await dict.ensure('post.status')
+  await load()
+})
 
 async function save() {
   if (!form.title.trim() || !form.content_md.trim()) {
-    message.warning('Title and content are required')
+    message.warning(t('postEdit.requiredError'))
     return
   }
   saving.value = true
@@ -66,14 +70,14 @@ async function save() {
     }
     if (isEdit.value) {
       await postsApi.adminUpdate(Number(props.id), payload)
-      message.success('Updated')
+      message.success(t('postEdit.saved'))
     } else {
       const created = await postsApi.adminCreate(payload)
-      message.success('Created')
+      message.success(t('postEdit.created'))
       router.replace({ name: 'manage-post-edit', params: { id: created.id } })
     }
   } catch (e: any) {
-    message.error(e?.response?.data?.error ?? 'Save failed')
+    message.error(e?.response?.data?.error ?? t('common.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -82,29 +86,29 @@ async function save() {
 
 <template>
   <NSpin :show="loading">
-    <h2 style="margin-top: 0">{{ isEdit ? 'Edit post' : 'New post' }}</h2>
+    <h2 style="margin-top: 0">{{ isEdit ? t('postEdit.titleEdit') : t('postEdit.titleNew') }}</h2>
     <NForm label-placement="top">
-      <NFormItem label="Title" required>
+      <NFormItem :label="t('postEdit.fields.title')" required>
         <NInput v-model:value="form.title" maxlength="200" />
       </NFormItem>
-      <NFormItem label="Slug (optional — generated from title if empty)">
-        <NInput v-model:value="form.slug" placeholder="my-post-slug" />
+      <NFormItem :label="t('postEdit.fields.slug')">
+        <NInput v-model:value="form.slug" :placeholder="t('postEdit.fields.slugPlaceholder')" />
       </NFormItem>
-      <NFormItem label="Excerpt (optional)">
+      <NFormItem :label="t('postEdit.fields.excerpt')">
         <NInput v-model:value="form.excerpt" type="textarea" :rows="2" />
       </NFormItem>
-      <NFormItem label="Tags">
+      <NFormItem :label="t('postEdit.fields.tags')">
         <NDynamicTags v-model:value="form.tags" />
       </NFormItem>
-      <NFormItem label="Status">
+      <NFormItem :label="t('postEdit.fields.status')">
         <NSelect v-model:value="form.status" :options="statusOptions" style="max-width: 200px;" />
       </NFormItem>
-      <NFormItem label="Content (Markdown)" required>
+      <NFormItem :label="t('postEdit.fields.content')" required>
         <MdEditor v-model="form.content_md" :preview-only="false" style="height: 540px; width: 100%;" />
       </NFormItem>
       <NSpace>
-        <NButton type="primary" :loading="saving" @click="save">Save</NButton>
-        <NButton @click="router.push({ name: 'manage-posts' })">Cancel</NButton>
+        <NButton type="primary" :loading="saving" @click="save">{{ t('common.save') }}</NButton>
+        <NButton @click="router.push({ name: 'manage-posts' })">{{ t('common.cancel') }}</NButton>
       </NSpace>
     </NForm>
   </NSpin>

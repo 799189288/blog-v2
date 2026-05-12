@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { NDataTable, NInput, NSpace, NButton } from 'naive-ui'
 import type { DataTableColumns, DataTableSortState } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import * as dataApi from '../../api/data'
 import type { TagBrowseRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
 
+const { t } = useI18n()
 const rows = ref<TagBrowseRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -40,19 +42,19 @@ function onSorterChange(s: DataTableSortState | null) {
 
 function openDetail(row: TagBrowseRow) { detail.value = row; drawer.value = true }
 
-const columns: DataTableColumns<TagBrowseRow> = [
-  { title: 'ID', key: 'id', width: 80, sorter: true },
-  { title: 'Name', key: 'name', sorter: true, render: r => h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, r.name) },
-  { title: 'Slug', key: 'slug', sorter: true },
-  { title: 'Posts', key: 'post_count', width: 100, sorter: true },
-]
+const columns = computed<DataTableColumns<TagBrowseRow>>(() => [
+  { title: t('dataTags.cols.id'), key: 'id', width: 80, sorter: true },
+  { title: t('dataTags.cols.name'), key: 'name', sorter: true, render: r => h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, r.name) },
+  { title: t('dataTags.cols.slug'), key: 'slug', sorter: true },
+  { title: t('dataTags.cols.posts'), key: 'post_count', width: 100, sorter: true },
+])
 </script>
 
 <template>
-  <h2 style="margin-top: 0">Tags</h2>
+  <h2 style="margin-top: 0">{{ t('dataTags.title') }}</h2>
   <NSpace style="margin-bottom: 12px;" :size="12" align="center">
-    <NInput v-model:value="q" placeholder="Search name..." clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
-    <NButton @click="load">Refresh</NButton>
+    <NInput v-model:value="q" :placeholder="t('dataTags.searchPlaceholder')" clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
+    <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
   <NDataTable
     remote
@@ -68,5 +70,5 @@ const columns: DataTableColumns<TagBrowseRow> = [
     }"
     @update:sorter="onSorterChange"
   />
-  <RowDetailDrawer v-model:show="drawer" title="Tag row" :data="detail" />
+  <RowDetailDrawer v-model:show="drawer" :title="t('dataTags.drawerTitle')" :data="detail" />
 </template>

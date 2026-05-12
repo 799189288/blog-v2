@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import {
   NDataTable, NTag, NSelect, NDatePicker, NSpace, NButton,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as auditApi from '../api/audit'
 import * as usersApi from '../api/users'
 import type { AuditRow, UserRow } from '../types'
 import RowDetailDrawer from '../components/RowDetailDrawer.vue'
+import { useDictStore } from '../stores/dict'
 
+const { t } = useI18n()
+const dict = useDictStore()
 const rows = ref<AuditRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -22,12 +26,7 @@ const range = ref<[number, number] | null>(null)
 
 const users = ref<UserRow[]>([])
 
-const actionOptions = [
-  'login',
-  'post.create', 'post.update', 'post.delete',
-  'comment.set_status', 'comment.delete',
-  'user.create', 'user.reset_password', 'user.delete',
-].map(a => ({ label: a, value: a }))
+const actionOptions = computed(() => dict.options('audit.action').value)
 
 const drawer = ref(false)
 const detail = ref<unknown>(null)
@@ -53,6 +52,7 @@ async function load() {
 }
 
 onMounted(async () => {
+  await dict.ensure('audit.action')
   await loadUsers()
   await load()
 })
@@ -79,24 +79,24 @@ function resetFilters() {
   load()
 }
 
-const columns: DataTableColumns<AuditRow> = [
-  { title: 'ID', key: 'id', width: 70 },
-  { title: 'When', key: 'created_at', width: 160, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm:ss') },
-  { title: 'User', key: 'username', width: 140 },
+const columns = computed<DataTableColumns<AuditRow>>(() => [
+  { title: t('audit.cols.id'), key: 'id', width: 70 },
+  { title: t('audit.cols.when'), key: 'created_at', width: 160, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm:ss') },
+  { title: t('audit.cols.user'), key: 'username', width: 140 },
   {
-    title: 'Action', key: 'action', width: 180,
-    render: r => h(NTag, { size: 'small', type: actionType(r.action) }, () => r.action),
+    title: t('audit.cols.action'), key: 'action', width: 180,
+    render: r => h(NTag, { size: 'small', type: actionType(r.action) }, () => dict.label('audit.action', r.action, t('audit.unknown'))),
   },
-  { title: 'Target', key: 'target', width: 140, render: r => r.target_type ? `${r.target_type}#${r.target_id ?? '?'}` : '—' },
-  { title: 'IP', key: 'ip', width: 130, render: r => r.ip ?? '—' },
+  { title: t('audit.cols.target'), key: 'target', width: 140, render: r => r.target_type ? `${r.target_type}#${r.target_id ?? '?'}` : t('common.none') },
+  { title: t('audit.cols.ip'), key: 'ip', width: 130, render: r => r.ip ?? t('common.none') },
   {
-    title: 'Detail', key: 'detail',
+    title: t('audit.cols.detail'), key: 'detail',
     render(r) {
-      if (!r.detail) return h('span', { style: 'opacity:.5' }, '—')
-      return h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, 'view')
+      if (!r.detail) return h('span', { style: 'opacity:.5' }, t('common.none'))
+      return h('a', { onClick: () => openDetail(r), style: 'cursor:pointer' }, t('common.view'))
     },
   },
-]
+])
 
 function actionType(a: string): 'default' | 'success' | 'warning' | 'error' | 'info' {
   if (a === 'login') return 'info'
@@ -107,14 +107,14 @@ function actionType(a: string): 'default' | 'success' | 'warning' | 'error' | 'i
 </script>
 
 <template>
-  <h2 style="margin-top: 0">Audit log</h2>
+  <h2 style="margin-top: 0">{{ t('audit.title') }}</h2>
 
   <NSpace style="margin-bottom: 12px;" :size="12" align="center" wrap>
-    <NSelect v-model:value="userId" :options="userOptions()" placeholder="User" clearable style="width: 200px;" />
-    <NSelect v-model:value="action" :options="actionOptions" placeholder="Action" clearable style="width: 220px;" />
+    <NSelect v-model:value="userId" :options="userOptions()" :placeholder="t('audit.user')" clearable style="width: 200px;" />
+    <NSelect v-model:value="action" :options="actionOptions" :placeholder="t('audit.action')" clearable style="width: 220px;" />
     <NDatePicker v-model:value="range" type="daterange" clearable />
-    <NButton type="primary" @click="applyFilters">Apply</NButton>
-    <NButton @click="resetFilters">Reset</NButton>
+    <NButton type="primary" @click="applyFilters">{{ t('common.apply') }}</NButton>
+    <NButton @click="resetFilters">{{ t('common.reset') }}</NButton>
   </NSpace>
 
   <NDataTable
@@ -131,5 +131,5 @@ function actionType(a: string): 'default' | 'success' | 'warning' | 'error' | 'i
     }"
   />
 
-  <RowDetailDrawer v-model:show="drawer" title="Audit entry" :data="detail" />
+  <RowDetailDrawer v-model:show="drawer" :title="t('audit.drawerTitle')" :data="detail" />
 </template>
