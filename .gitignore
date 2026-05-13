@@ -3,6 +3,10 @@ backend/target/
 backend/Cargo.lock.bak
 **/*.rs.bk
 
+# Uploaded images are runtime data — never commit them. Keep the
+# directory itself out of git; it gets recreated on startup.
+backend/uploads/
+
 # --- Node / Vite (frontend + admin-frontend) ---
 node_modules/
 **/node_modules/
