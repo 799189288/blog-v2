@@ -56,6 +56,7 @@ pub fn build(state: AppState, config: &Config) -> Router {
         // stats
         .route("/stats/overview", get(handlers::admin_stats::overview))
         .route("/stats/trend", get(handlers::admin_stats::trend))
+        .route("/stats/dashboard", get(handlers::admin_stats::dashboard))
         // user management
         .route("/users", get(handlers::admin_users::list))
         .route("/users", post(handlers::admin_users::create))

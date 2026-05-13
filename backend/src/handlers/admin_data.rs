@@ -59,6 +59,7 @@ pub struct PostRow {
     pub title: String,
     pub status: String,
     pub author_id: i64,
+    pub views: i64,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339")]
@@ -73,7 +74,7 @@ pub async fn posts(
     Query(q): Query<CommonQuery>,
 ) -> AppResult<Json<Page<PostRow>>> {
     let (page, per_page, offset) = pagination(&q);
-    let allowed = ["id", "title", "status", "published_at", "created_at", "updated_at"];
+    let allowed = ["id", "title", "status", "views", "published_at", "created_at", "updated_at"];
     let order = order_by(&q, &allowed, "created_at");
 
     // Validate status filter
@@ -86,7 +87,7 @@ pub async fn posts(
 
     let items_sql = format!(
         r#"
-        SELECT id, slug, title, status, author_id, published_at, created_at, updated_at
+        SELECT id, slug, title, status, author_id, views, published_at, created_at, updated_at
         FROM posts
         WHERE ($1::text IS NULL OR status = $1)
           AND ($2::text IS NULL OR title ILIKE $2)

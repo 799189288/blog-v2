@@ -1,5 +1,6 @@
 use axum::{Json, extract::{Query, State}};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use time::OffsetDateTime;
 
 use crate::{
@@ -172,4 +173,121 @@ pub async fn trend(
     .await?;
 
     Ok(Json(TrendResponse { posts, comments }))
+}
+
+// ---------------- Dashboard aggregate ----------------
+
+#[derive(Debug, Serialize)]
+pub struct DashboardResponse {
+    pub overview: Overview,
+    pub top_posts: Vec<TopPost>,
+    pub recent_comments: Vec<RecentComment>,
+    pub tag_cloud: Vec<TagCloudItem>,
+}
+
+#[derive(Debug, Serialize, FromRow)]
+pub struct TopPost {
+    pub id: i64,
+    pub slug: String,
+    pub title: String,
+    pub views: i64,
+    pub comment_count: i64,
+}
+
+#[derive(Debug, Serialize, FromRow)]
+pub struct RecentComment {
+    pub id: i64,
+    pub post_id: i64,
+    pub post_title: String,
+    pub post_slug: String,
+    pub author_name: String,
+    pub content: String,
+    pub status: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Serialize, FromRow)]
+pub struct TagCloudItem {
+    pub id: i64,
+    pub name: String,
+    pub slug: String,
+    pub post_count: i64,
+}
+
+pub async fn dashboard(
+    State(state): State<AppState>,
+    user: AuthUser,
+) -> AppResult<Json<DashboardResponse>> {
+    // Reuse the existing aggregator for the headline stats.
+    let overview = overview(State(state.clone()), user).await?.0;
+
+    let top_posts: Vec<TopPost> = sqlx::query_as(
+        r#"
+        SELECT
+            p.id,
+            p.slug,
+            p.title,
+            p.views,
+            COALESCE(c.cnt, 0)::bigint AS comment_count
+        FROM posts p
+        LEFT JOIN (
+            SELECT post_id, COUNT(*)::bigint AS cnt
+            FROM comments
+            WHERE status = 'approved'
+            GROUP BY post_id
+        ) c ON c.post_id = p.id
+        WHERE p.status = 'published'
+        ORDER BY p.views DESC, p.id DESC
+        LIMIT 5
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let recent_comments: Vec<RecentComment> = sqlx::query_as(
+        r#"
+        SELECT
+            c.id,
+            c.post_id,
+            p.title AS post_title,
+            p.slug  AS post_slug,
+            c.author_name,
+            c.content,
+            c.status,
+            c.created_at
+        FROM comments c
+        JOIN posts p ON p.id = c.post_id
+        ORDER BY c.created_at DESC
+        LIMIT 8
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let tag_cloud: Vec<TagCloudItem> = sqlx::query_as(
+        r#"
+        SELECT
+            t.id,
+            t.name,
+            t.slug,
+            COUNT(pt.post_id)::bigint AS post_count
+        FROM tags t
+        LEFT JOIN post_tags pt ON pt.tag_id = t.id
+        LEFT JOIN posts p ON p.id = pt.post_id AND p.status = 'published'
+        GROUP BY t.id
+        HAVING COUNT(pt.post_id) > 0
+        ORDER BY post_count DESC, t.name
+        LIMIT 40
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(DashboardResponse {
+        overview,
+        top_posts,
+        recent_comments,
+        tag_cloud,
+    }))
 }

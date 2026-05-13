@@ -75,6 +75,7 @@ const columns = computed<DataTableColumns<PostBrowseRow>>(() => [
     },
   },
   { title: t('dataPosts.cols.author'), key: 'author_id', width: 90 },
+  { title: t('dataPosts.cols.views'), key: 'views', width: 90, sorter: true },
   { title: t('dataPosts.cols.published'), key: 'published_at', width: 150, sorter: true, render: r => r.published_at ? dayjs(r.published_at).format('YYYY-MM-DD HH:mm') : t('common.none') },
   { title: t('dataPosts.cols.created'), key: 'created_at', width: 150, sorter: true, render: r => dayjs(r.created_at).format('YYYY-MM-DD HH:mm') },
 ])

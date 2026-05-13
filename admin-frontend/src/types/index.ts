@@ -33,6 +33,39 @@ export interface Trend {
   comments: TrendPoint[]
 }
 
+export interface TopPost {
+  id: number
+  slug: string
+  title: string
+  views: number
+  comment_count: number
+}
+
+export interface RecentComment {
+  id: number
+  post_id: number
+  post_title: string
+  post_slug: string
+  author_name: string
+  content: string
+  status: 'pending' | 'approved' | 'spam'
+  created_at: string
+}
+
+export interface TagCloudItem {
+  id: number
+  name: string
+  slug: string
+  post_count: number
+}
+
+export interface DashboardResponse {
+  overview: Overview
+  top_posts: TopPost[]
+  recent_comments: RecentComment[]
+  tag_cloud: TagCloudItem[]
+}
+
 export interface UserRow {
   id: number
   username: string
@@ -46,6 +79,7 @@ export interface PostBrowseRow {
   title: string
   status: 'draft' | 'published'
   author_id: number
+  views: number
   published_at: string | null
   created_at: string
   updated_at: string
@@ -94,6 +128,7 @@ export interface PostSummary {
   title: string
   excerpt: string | null
   status: 'draft' | 'published'
+  views: number
   published_at: string | null
   created_at: string
   tags: Tag[]

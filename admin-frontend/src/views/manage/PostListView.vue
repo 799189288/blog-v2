@@ -64,6 +64,7 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
     },
   },
   { title: t('managePosts.cols.tags'), key: 'tags', render: r => r.tags.map(tg => tg.name).join(', ') },
+  { title: t('managePosts.cols.views'), key: 'views', width: 90 },
   { title: t('managePosts.cols.published'), key: 'published_at', width: 140, render: r => r.published_at ? dayjs(r.published_at).format('YYYY-MM-DD') : t('common.none') },
   {
     title: t('managePosts.cols.actions'), key: 'actions', width: 200,
