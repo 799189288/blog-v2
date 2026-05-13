@@ -30,6 +30,24 @@ const form = reactive({
 
 const statusOptions = computed(() => dict.options('post.status').value)
 
+/// MdEditor's onUploadImg contract: receives a File[] and a callback the
+/// editor invokes with one URL per file. We upload sequentially so a
+/// failed one stops the chain instead of leaving inserted-but-broken
+/// placeholders; md-editor-v3 inserts ![](url) for every URL returned.
+async function onUploadImg(files: File[], callback: (urls: string[]) => void) {
+  const urls: string[] = []
+  for (const f of files) {
+    try {
+      const { url } = await postsApi.uploadImage(f)
+      urls.push(url)
+    } catch (e: any) {
+      message.error(e?.response?.data?.error ?? t('postEdit.uploadFailed'))
+      break
+    }
+  }
+  callback(urls)
+}
+
 async function load() {
   if (!props.id) return
   loading.value = true
@@ -104,7 +122,12 @@ async function save() {
         <NSelect v-model:value="form.status" :options="statusOptions" style="max-width: 200px;" />
       </NFormItem>
       <NFormItem :label="t('postEdit.fields.content')" required>
-        <MdEditor v-model="form.content_md" :preview-only="false" style="height: 540px; width: 100%;" />
+        <MdEditor
+          v-model="form.content_md"
+          :preview-only="false"
+          :on-upload-img="onUploadImg"
+          style="height: 540px; width: 100%;"
+        />
       </NFormItem>
       <NSpace>
         <NButton type="primary" :loading="saving" @click="save">{{ t('common.save') }}</NButton>

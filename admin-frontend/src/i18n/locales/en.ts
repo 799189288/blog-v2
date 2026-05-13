@@ -147,6 +147,7 @@ export default {
     saved: 'Updated',
     created: 'Created',
     loadFailed: 'Failed to load post',
+    uploadFailed: 'Image upload failed',
   },
   moderation: {
     title: 'Comment moderation',

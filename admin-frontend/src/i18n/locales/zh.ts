@@ -147,6 +147,7 @@ export default {
     saved: '已更新',
     created: '已创建',
     loadFailed: '加载文章失败',
+    uploadFailed: '图片上传失败',
   },
   moderation: {
     title: '评论审核',

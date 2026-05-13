@@ -13,3 +13,4 @@ pub mod feed;
 pub mod posts;
 pub mod search;
 pub mod tags;
+pub mod uploads;

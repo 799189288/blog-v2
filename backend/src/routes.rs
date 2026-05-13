@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     http::{HeaderValue, Method, header},
     middleware,
     routing::{delete, get, patch, post, put},
@@ -67,6 +68,15 @@ pub fn build(state: AppState, config: &Config) -> Router {
         .route("/data/users", get(handlers::admin_data::users))
         // audit log
         .route("/audit", get(handlers::admin_audit::list))
+        // image uploads — multipart, capped by AppState.uploads.max_bytes
+        // at the handler level; axum's default 2 MB body limit is raised
+        // here so the multipart parser can see the whole body first.
+        .route(
+            "/uploads",
+            post(handlers::uploads::upload).layer(DefaultBodyLimit::max(
+                state.uploads.max_bytes.saturating_add(64 * 1024),
+            )),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             require_admin,
@@ -83,11 +93,20 @@ pub fn build(state: AppState, config: &Config) -> Router {
         .route("/sitemap.xml", get(handlers::feed::sitemap))
         .with_state(state);
 
+    // Serve uploaded images straight from disk. ServeDir handles range
+    // requests, ETags, content-type sniffing — no need for a handler.
+    let uploads_dir = PathBuf::from(&config.upload_dir);
+    let upload_files = Router::<()>::new().nest_service(
+        "/uploads",
+        ServeDir::new(&uploads_dir).precompressed_gzip(),
+    );
+
     let cors = build_cors(config);
 
     let mut router = Router::new()
         .nest("/api", api)
         .merge(feeds)
+        .merge(upload_files)
         .layer(cors)
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http());

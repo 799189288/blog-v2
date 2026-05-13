@@ -24,3 +24,22 @@ export async function adminUpdate(id: number, input: Partial<PostInput>) {
 export async function adminDelete(id: number) {
   await api.delete(`/admin/posts/${id}`)
 }
+
+export interface UploadResponse {
+  url: string
+  filename: string
+  size: number
+}
+
+/// Uploads one image at a time via multipart and returns the public URL
+/// the editor can embed. md-editor-v3 hands us a File list in its
+/// onUploadImg callback; we call this in series and collect URLs.
+export async function uploadImage(file: File): Promise<UploadResponse> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post<UploadResponse>('/admin/uploads', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60_000,
+  })
+  return data
+}
