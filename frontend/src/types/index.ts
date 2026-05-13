@@ -14,6 +14,9 @@ export interface PostSummary {
   title: string
   excerpt: string | null
   status: 'draft' | 'published'
+  views: number
+  word_count: number
+  reading_time_min: number
   published_at: string | null
   created_at: string
   tags: Tag[]
@@ -23,6 +26,24 @@ export interface PostDetail extends PostSummary {
   content_md: string
   content_html: string
   updated_at: string
+}
+
+export interface NavPost {
+  slug: string
+  title: string
+}
+
+export interface RelatedPost {
+  slug: string
+  title: string
+  excerpt: string | null
+  published_at: string | null
+}
+
+export interface PostNav {
+  prev: NavPost | null
+  next: NavPost | null
+  related: RelatedPost[]
 }
 
 export interface Paginated<T> {

@@ -14,7 +14,7 @@ use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
-use crate::{config::Config, state::AppState};
+use crate::{config::Config, state::{AppState, SiteInfo, UploadCfg}};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -39,7 +39,24 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("running migrations")?;
 
-    let state = AppState::new(pool, config.jwt_secret.clone());
+    // Make sure the upload directory exists so the first POST doesn't 500.
+    std::fs::create_dir_all(&config.upload_dir)
+        .with_context(|| format!("creating upload dir {}", config.upload_dir))?;
+
+    let state = AppState::new(
+        pool,
+        config.jwt_secret.clone(),
+        SiteInfo {
+            url: config.site_url.clone(),
+            title: config.site_title.clone(),
+            description: config.site_description.clone(),
+        },
+        UploadCfg {
+            dir: config.upload_dir.clone(),
+            max_bytes: config.max_upload_bytes,
+        },
+        config.comment_blocklist.clone(),
+    );
 
     let app = routes::build(state, &config);
 

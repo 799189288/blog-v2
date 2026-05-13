@@ -79,3 +79,42 @@ fn truncate(s: &str, max_chars: usize) -> String {
     }
     out
 }
+
+/// Rough word count for mixed CJK / Latin markdown.
+///
+/// CJK characters (Han, Hiragana, Katakana, Hangul) count 1 each. The
+/// remaining non-CJK text is split on whitespace and each non-empty
+/// token counts as one word. Markdown punctuation isn't stripped — it's
+/// noise either way, and consistent across edits.
+pub fn word_count(md: &str) -> usize {
+    let mut cjk = 0usize;
+    let mut latin = String::with_capacity(md.len());
+    for ch in md.chars() {
+        if is_cjk(ch) {
+            cjk += 1;
+        } else {
+            latin.push(ch);
+        }
+    }
+    let latin_tokens = latin.split_whitespace().filter(|s| !s.is_empty()).count();
+    cjk + latin_tokens
+}
+
+/// Estimated reading time in whole minutes, floored at 1.
+/// 300 "words" per minute matches the rule of thumb for adult readers on
+/// mixed CJK / English content (English-only would be ~250).
+pub fn reading_time_min(md: &str) -> i32 {
+    let wc = word_count(md);
+    ((wc as f64 / 300.0).ceil() as i32).max(1)
+}
+
+fn is_cjk(c: char) -> bool {
+    matches!(c,
+        '\u{4E00}'..='\u{9FFF}'    // CJK Unified Ideographs
+        | '\u{3400}'..='\u{4DBF}'  // CJK Ext-A
+        | '\u{20000}'..='\u{2A6DF}' // CJK Ext-B
+        | '\u{3040}'..='\u{309F}'  // Hiragana
+        | '\u{30A0}'..='\u{30FF}'  // Katakana
+        | '\u{AC00}'..='\u{D7AF}'  // Hangul Syllables
+    )
+}

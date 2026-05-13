@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Paginated, PostDetail, PostSummary } from '../types'
+import type { Paginated, PostDetail, PostNav, PostSummary } from '../types'
 
 export async function listPublished(params: { page?: number; per_page?: number; tag?: string } = {}) {
   const { data } = await api.get<Paginated<PostSummary>>('/posts', { params })
@@ -8,6 +8,11 @@ export async function listPublished(params: { page?: number; per_page?: number; 
 
 export async function getBySlug(slug: string) {
   const { data } = await api.get<PostDetail>(`/posts/${encodeURIComponent(slug)}`)
+  return data
+}
+
+export async function getRelated(slug: string) {
+  const { data } = await api.get<PostNav>(`/posts/${encodeURIComponent(slug)}/related`)
   return data
 }
 

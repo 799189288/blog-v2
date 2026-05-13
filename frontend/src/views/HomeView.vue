@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { NPagination, NSpin, NEmpty } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
 import * as tagsApi from '../api/tags'
 import PostCard from '../components/PostCard.vue'
 import { RouterLink } from 'vue-router'
+import { useHead } from '../composables/useHead'
 import type { PostSummary, TagWithCount } from '../types'
+
+const { t } = useI18n()
+useHead(() => ({ title: t('layout.brand'), description: t('home.metaDescription') }))
 
 const posts = ref<PostSummary[]>([])
 const total = ref(0)

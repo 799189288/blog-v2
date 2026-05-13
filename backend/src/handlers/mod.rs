@@ -9,6 +9,7 @@ pub mod admin_users;
 pub mod auth;
 pub mod comments;
 pub mod dict;
+pub mod feed;
 pub mod posts;
 pub mod search;
 pub mod tags;

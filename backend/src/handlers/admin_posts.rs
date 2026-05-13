@@ -54,6 +54,9 @@ pub async fn list_all(
                 title: p.title,
                 excerpt: p.excerpt,
                 status: p.status,
+                views: p.views,
+                word_count: p.word_count,
+                reading_time_min: p.reading_time_min,
                 published_at: p.published_at,
                 created_at: p.created_at,
                 tags,
@@ -82,6 +85,9 @@ pub async fn get_by_id(
         content_md: post.content_md,
         content_html: post.content_html,
         status: post.status,
+        views: post.views,
+        word_count: post.word_count,
+        reading_time_min: post.reading_time_min,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,
@@ -117,6 +123,8 @@ pub async fn create(
         Some(s) if !s.trim().is_empty() => Some(s),
         _ => Some(markdown::excerpt(&input.content_md, 200)),
     };
+    let word_count = markdown::word_count(&input.content_md) as i32;
+    let reading_time = markdown::reading_time_min(&input.content_md);
     let published_at: Option<OffsetDateTime> = if status == "published" {
         Some(OffsetDateTime::now_utc())
     } else {
@@ -127,8 +135,8 @@ pub async fn create(
 
     let post = sqlx::query_as::<_, Post>(
         r#"
-        INSERT INTO posts (slug, title, excerpt, content_md, content_html, status, author_id, published_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO posts (slug, title, excerpt, content_md, content_html, status, author_id, published_at, word_count, reading_time_min)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
         "#,
     )
@@ -140,6 +148,8 @@ pub async fn create(
     .bind(&status)
     .bind(user.user_id)
     .bind(published_at)
+    .bind(word_count)
+    .bind(reading_time)
     .fetch_one(&mut *tx)
     .await
     .map_err(map_slug_conflict)?;
@@ -167,6 +177,9 @@ pub async fn create(
         content_md: post.content_md,
         content_html: post.content_html,
         status: post.status,
+        views: post.views,
+        word_count: post.word_count,
+        reading_time_min: post.reading_time_min,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,
@@ -223,7 +236,8 @@ pub async fn update(
         r#"
         UPDATE posts
         SET slug = $2, title = $3, excerpt = $4, content_md = $5, content_html = $6,
-            status = $7, published_at = $8, updated_at = now()
+            status = $7, published_at = $8, word_count = $9, reading_time_min = $10,
+            updated_at = now()
         WHERE id = $1
         RETURNING *
         "#,
@@ -236,6 +250,8 @@ pub async fn update(
     .bind(&html)
     .bind(&new_status)
     .bind(published_at)
+    .bind(markdown::word_count(&content_md) as i32)
+    .bind(markdown::reading_time_min(&content_md))
     .fetch_one(&mut *tx)
     .await
     .map_err(map_slug_conflict)?;
@@ -277,6 +293,9 @@ pub async fn update(
         content_md: post.content_md,
         content_html: post.content_html,
         status: post.status,
+        views: post.views,
+        word_count: post.word_count,
+        reading_time_min: post.reading_time_min,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,

@@ -1,9 +1,12 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
+    http::HeaderMap,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::net::SocketAddr;
+use time::OffsetDateTime;
 
 use crate::{
     error::{AppError, AppResult},
@@ -101,6 +104,9 @@ pub async fn list_published(
                 title: p.title,
                 excerpt: p.excerpt,
                 status: p.status,
+                views: p.views,
+                word_count: p.word_count,
+                reading_time_min: p.reading_time_min,
                 published_at: p.published_at,
                 created_at: p.created_at,
                 tags,
@@ -118,14 +124,35 @@ pub async fn list_published(
 
 pub async fn get_by_slug(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Path(slug): Path<String>,
 ) -> AppResult<Json<PostDetail>> {
-    let post = sqlx::query_as::<_, Post>(
-        r#"SELECT * FROM posts WHERE slug = $1 AND status = 'published'"#,
-    )
-    .bind(&slug)
-    .fetch_optional(&state.db)
-    .await?
+    let ip = client_ip(&headers, addr);
+    let should_count = state.should_count_view(&slug, &ip);
+
+    // Bump views only when this is a fresh view; otherwise return the row as-is.
+    // WHERE on status keeps drafts hidden either way.
+    let post = if should_count {
+        sqlx::query_as::<_, Post>(
+            r#"
+            UPDATE posts
+            SET views = views + 1
+            WHERE slug = $1 AND status = 'published'
+            RETURNING *
+            "#,
+        )
+        .bind(&slug)
+        .fetch_optional(&state.db)
+        .await?
+    } else {
+        sqlx::query_as::<_, Post>(
+            r#"SELECT * FROM posts WHERE slug = $1 AND status = 'published'"#,
+        )
+        .bind(&slug)
+        .fetch_optional(&state.db)
+        .await?
+    }
     .ok_or(AppError::NotFound)?;
 
     let tags = load_tags_for_post(&state, post.id).await?;
@@ -137,10 +164,113 @@ pub async fn get_by_slug(
         content_md: post.content_md,
         content_html: post.content_html,
         status: post.status,
+        views: post.views,
+        word_count: post.word_count,
+        reading_time_min: post.reading_time_min,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,
         tags,
+    }))
+}
+
+/// Best-effort client IP, honoring `X-Forwarded-For` when present.
+/// Falls back to the immediate peer address.
+fn client_ip(headers: &HeaderMap, addr: SocketAddr) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| addr.ip().to_string())
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct NavPost {
+    pub slug: String,
+    pub title: String,
+}
+
+#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+pub struct RelatedPost {
+    pub slug: String,
+    pub title: String,
+    pub excerpt: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
+    pub published_at: Option<OffsetDateTime>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct PostNav {
+    pub prev: Option<NavPost>,
+    pub next: Option<NavPost>,
+    pub related: Vec<RelatedPost>,
+}
+
+/// Prev/next neighbours in the published timeline + posts that share tags.
+/// Mirrors `get_by_slug`'s 404 on missing/draft so the frontend only fetches
+/// this after the article itself was found.
+pub async fn related(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+) -> AppResult<Json<PostNav>> {
+    // One pass over the published list with window functions: in DESC order,
+    // LAG = newer post (next), LEAD = older post (prev).
+    #[derive(sqlx::FromRow)]
+    struct NavRow {
+        newer_slug: Option<String>,
+        newer_title: Option<String>,
+        older_slug: Option<String>,
+        older_title: Option<String>,
+    }
+    let nav = sqlx::query_as::<_, NavRow>(
+        r#"
+        WITH ordered AS (
+            SELECT
+                slug,
+                LAG(slug)  OVER w AS newer_slug,
+                LAG(title) OVER w AS newer_title,
+                LEAD(slug) OVER w AS older_slug,
+                LEAD(title) OVER w AS older_title
+            FROM posts
+            WHERE status = 'published'
+            WINDOW w AS (ORDER BY published_at DESC NULLS LAST, id DESC)
+        )
+        SELECT newer_slug, newer_title, older_slug, older_title
+        FROM ordered
+        WHERE slug = $1
+        "#,
+    )
+    .bind(&slug)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+
+    let related = sqlx::query_as::<_, RelatedPost>(
+        r#"
+        SELECT p.slug, p.title, p.excerpt, p.published_at
+        FROM posts p
+        JOIN post_tags pt   ON pt.post_id   = p.id
+        JOIN post_tags pt2  ON pt2.tag_id   = pt.tag_id
+        JOIN posts curr     ON curr.id      = pt2.post_id
+        WHERE curr.slug = $1
+          AND curr.status = 'published'
+          AND p.id != curr.id
+          AND p.status = 'published'
+        GROUP BY p.id, p.slug, p.title, p.excerpt, p.published_at
+        ORDER BY COUNT(*) DESC, p.published_at DESC NULLS LAST, p.id DESC
+        LIMIT 5
+        "#,
+    )
+    .bind(&slug)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(PostNav {
+        prev: nav.older_slug.zip(nav.older_title).map(|(slug, title)| NavPost { slug, title }),
+        next: nav.newer_slug.zip(nav.newer_title).map(|(slug, title)| NavPost { slug, title }),
+        related,
     }))
 }
 

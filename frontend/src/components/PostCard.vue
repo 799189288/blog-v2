@@ -16,6 +16,12 @@ defineProps<{ post: PostSummary }>()
       <span v-if="post.published_at">
         {{ dayjs(post.published_at).format('YYYY-MM-DD') }}
       </span>
+      <span class="views" :title="$t('post.views')">
+        <span class="eye">👁</span> {{ post.views }}
+      </span>
+      <span v-if="post.reading_time_min > 0" class="reading-time" :title="$t('post.readingTime')">
+        ⏱ {{ $t('post.readingTimeShort', { min: post.reading_time_min }) }}
+      </span>
       <NSpace :size="6" inline style="margin-left: 12px;">
         <RouterLink
           v-for="t in post.tags"
@@ -39,7 +45,10 @@ defineProps<{ post: PostSummary }>()
 .title { margin: 0 0 4px; font-size: 22px; }
 .title a { text-decoration: none; }
 .title a:hover { text-decoration: underline; }
-.meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; }
+.meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; gap: 12px; }
+.views { display: inline-flex; align-items: center; gap: 4px; }
+.views .eye { font-size: 14px; }
+.reading-time { display: inline-flex; align-items: center; gap: 4px; }
 .excerpt { margin: 8px 0 0; }
 .tag-link { text-decoration: none; cursor: pointer; }
 .tag-link :deep(.n-tag) { cursor: pointer; }

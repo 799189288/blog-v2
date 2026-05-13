@@ -2,13 +2,18 @@
 import { computed, ref, watch } from 'vue'
 import { NInput, NButton, NSpin, NEmpty, NPagination } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
 import PostCard from '../components/PostCard.vue'
 import BackButton from '../components/BackButton.vue'
+import { useHead } from '../composables/useHead'
 import type { PostSummary } from '../types'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
+
+useHead(() => ({ title: t('search.title') }))
 
 const q = ref<string>((route.query.q as string) ?? '')
 const page = ref(1)

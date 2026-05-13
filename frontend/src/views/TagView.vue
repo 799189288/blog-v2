@@ -2,19 +2,26 @@
 import { onMounted, ref, watch } from 'vue'
 import { NSpin, NEmpty } from 'naive-ui'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
 import * as tagsApi from '../api/tags'
 import PostCard from '../components/PostCard.vue'
 import BackButton from '../components/BackButton.vue'
+import { useHead } from '../composables/useHead'
 import type { PostSummary } from '../types'
 
 const props = defineProps<{ slug: string }>()
 const route = useRoute()
+const { t } = useI18n()
 
 const posts = ref<PostSummary[]>([])
 const loading = ref(true)
 const tagName = ref<string>(props.slug)
 const tagMissing = ref(false)
+
+useHead(() => ({
+  title: t('tag.title', { slug: tagName.value }),
+}))
 
 async function load() {
   loading.value = true

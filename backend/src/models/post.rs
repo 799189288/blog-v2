@@ -12,6 +12,9 @@ pub struct Post {
     pub content_html: String,
     pub status: String,
     pub author_id: i64,
+    pub views: i64,
+    pub word_count: i32,
+    pub reading_time_min: i32,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339")]
@@ -27,6 +30,9 @@ pub struct PostSummary {
     pub title: String,
     pub excerpt: Option<String>,
     pub status: String,
+    pub views: i64,
+    pub word_count: i32,
+    pub reading_time_min: i32,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339")]
@@ -43,6 +49,9 @@ pub struct PostDetail {
     pub content_md: String,
     pub content_html: String,
     pub status: String,
+    pub views: i64,
+    pub word_count: i32,
+    pub reading_time_min: i32,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339")]

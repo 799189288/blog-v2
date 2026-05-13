@@ -19,6 +19,7 @@ pub fn build(state: AppState, config: &Config) -> Router {
     let public = Router::new()
         .route("/posts", get(handlers::posts::list_published))
         .route("/posts/:slug", get(handlers::posts::get_by_slug))
+        .route("/posts/:slug/related", get(handlers::posts::related))
         .route("/posts/:slug/comments", get(handlers::comments::list_approved))
         .route("/posts/:slug/comments", post(handlers::comments::submit))
         .route("/tags", get(handlers::tags::list_with_counts))
@@ -74,12 +75,19 @@ pub fn build(state: AppState, config: &Config) -> Router {
     let api = Router::new()
         .merge(public)
         .nest("/admin", admin)
+        .with_state(state.clone());
+
+    // Feeds live at the site root (RSS readers expect /rss.xml).
+    let feeds = Router::new()
+        .route("/rss.xml", get(handlers::feed::rss))
+        .route("/sitemap.xml", get(handlers::feed::sitemap))
         .with_state(state);
 
     let cors = build_cors(config);
 
     let mut router = Router::new()
         .nest("/api", api)
+        .merge(feeds)
         .layer(cors)
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http());
