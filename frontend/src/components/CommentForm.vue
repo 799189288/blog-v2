@@ -22,6 +22,10 @@ const form = reactive({
   author_name: '',
   author_email: '',
   content: '',
+  // Honeypot — must stay empty. Rendered inside a CSS-hidden div so
+  // a human never sees or fills it; spam bots that fill every input
+  // get silently dropped by the server.
+  website: '',
 })
 
 async function onSubmit() {
@@ -36,11 +40,13 @@ async function onSubmit() {
       author_email: form.author_email.trim() || undefined,
       content: form.content.trim(),
       parent_id: props.parentId ?? undefined,
+      website: form.website,
     })
     message.success(t('commentForm.submitSuccess'))
     form.author_name = ''
     form.author_email = ''
     form.content = ''
+    form.website = ''
     emit('submitted')
   } catch (e: any) {
     message.error(e?.response?.data?.error ?? t('commentForm.submitFail'))
@@ -61,6 +67,20 @@ async function onSubmit() {
     <NFormItem :label="t('commentForm.email')">
       <NInput v-model:value="form.author_email" :placeholder="t('commentForm.emailPlaceholder')" />
     </NFormItem>
+    <!-- Honeypot. Hidden from real users via aria/CSS but visible to
+         naive spam bots that fill every input on the page. -->
+    <div class="hp-field" aria-hidden="true">
+      <label>
+        Website
+        <input
+          v-model="form.website"
+          type="text"
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </label>
+    </div>
     <NFormItem :label="t('commentForm.content')" required>
       <NInput v-model:value="form.content" type="textarea" :rows="compact ? 3 : 4" :placeholder="t('commentForm.contentPlaceholder')" />
     </NFormItem>
@@ -84,5 +104,18 @@ async function onSubmit() {
 .actions {
   display: flex;
   gap: 8px;
+}
+/* Hidden honeypot. `display: none` is enough — many bots ignore CSS but
+   the ones that do parse it skip non-visible inputs; the ones that don't
+   read CSS will fill the field and trip the server-side trap. Either way
+   we win. We also use absolute positioning off-screen as a backup since
+   some headless browsers actually run CSS. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 </style>

@@ -1,7 +1,9 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{ConnectInfo, Path, State},
+    http::HeaderMap,
 };
+use std::net::SocketAddr;
 use validator::Validate;
 
 use crate::{
@@ -31,12 +33,31 @@ pub async fn list_approved(
 
 pub async fn submit(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Path(slug): Path<String>,
     Json(input): Json<NewCommentInput>,
 ) -> AppResult<Json<Comment>> {
     input
         .validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
+
+    // Honeypot: a real form never carries a non-empty `website`. Pretend
+    // we accepted the comment (200 with the original payload echoed back
+    // as 'pending') so bots don't learn that the field is the trap.
+    if let Some(w) = input.website.as_deref() {
+        if !w.trim().is_empty() {
+            tracing::info!(slug = %slug, "honeypot triggered, dropping comment");
+            return Ok(Json(fake_pending(&input)));
+        }
+    }
+
+    let ip = client_ip(&headers, addr);
+    if !state.comment_allowed(&ip) {
+        return Err(AppError::BadRequest(
+            "you're commenting too fast, please wait a bit".into(),
+        ));
+    }
 
     let post_id: i64 = sqlx::query_scalar(
         r#"SELECT id FROM posts WHERE slug = $1 AND status = 'published'"#,
@@ -67,10 +88,18 @@ pub async fn submit(
         None
     };
 
+    // Auto-route obvious spam to the spam bucket. Keyword check is a
+    // simple lowercased substring match against name + email + body.
+    let initial_status = if matches_blocklist(&state.comment_blocklist, &input) {
+        "spam"
+    } else {
+        "pending"
+    };
+
     let row = sqlx::query_as::<_, Comment>(
         r#"
         INSERT INTO comments (post_id, parent_id, author_name, author_email, content, status)
-        VALUES ($1, $2, $3, $4, $5, 'pending')
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         "#,
     )
@@ -79,8 +108,51 @@ pub async fn submit(
     .bind(&input.author_name)
     .bind(input.author_email.as_deref())
     .bind(&input.content)
+    .bind(initial_status)
     .fetch_one(&state.db)
     .await?;
 
+    state.record_comment(&ip);
     Ok(Json(row))
+}
+
+fn matches_blocklist(blocklist: &[String], input: &NewCommentInput) -> bool {
+    if blocklist.is_empty() {
+        return false;
+    }
+    let haystack = format!(
+        "{} {} {}",
+        input.author_name,
+        input.author_email.as_deref().unwrap_or(""),
+        input.content
+    )
+    .to_lowercase();
+    blocklist.iter().any(|needle| haystack.contains(needle))
+}
+
+fn client_ip(headers: &HeaderMap, addr: SocketAddr) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| addr.ip().to_string())
+}
+
+/// Synthetic "pending" response for honeypot-tripped submissions. We
+/// don't touch the DB but the frontend gets the same shape it expects,
+/// so the user/bot sees nothing unusual happen.
+fn fake_pending(input: &NewCommentInput) -> Comment {
+    use time::OffsetDateTime;
+    Comment {
+        id: 0,
+        post_id: 0,
+        parent_id: input.parent_id,
+        author_name: input.author_name.clone(),
+        author_email: input.author_email.clone(),
+        content: input.content.clone(),
+        status: "pending".into(),
+        created_at: OffsetDateTime::now_utc(),
+    }
 }

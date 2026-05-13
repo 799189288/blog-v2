@@ -11,6 +11,8 @@ export interface NewCommentInput {
   author_email?: string
   content: string
   parent_id?: number | null
+  /// Honeypot field. Must be empty on real submissions.
+  website?: string
 }
 
 export async function submit(slug: string, input: NewCommentInput) {
