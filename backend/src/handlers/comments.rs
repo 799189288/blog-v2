@@ -59,13 +59,13 @@ pub async fn submit(
         ));
     }
 
-    let post_id: i64 = sqlx::query_scalar(
-        r#"SELECT id FROM posts WHERE slug = $1 AND status = 'published'"#,
+    let post: Option<(i64, String)> = sqlx::query_as(
+        r#"SELECT id, title FROM posts WHERE slug = $1 AND status = 'published'"#,
     )
     .bind(&slug)
     .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::NotFound)?;
+    .await?;
+    let (post_id, post_title) = post.ok_or(AppError::NotFound)?;
 
     let effective_parent_id = if let Some(parent_id) = input.parent_id {
         let parent: Option<(i64, Option<i64>)> = sqlx::query_as(
@@ -113,6 +113,31 @@ pub async fn submit(
     .await?;
 
     state.record_comment(&ip);
+
+    // Best-effort email notification. Spawn so the HTTP response isn't
+    // tied to SMTP latency, and so a flaky SMTP server never produces a
+    // user-facing 500 for a comment that *was* persisted.
+    if let Some(notifier) = state.notifier.clone() {
+        let slug = slug.clone();
+        let post_title = post_title.clone();
+        let author_name = row.author_name.clone();
+        let author_email = row.author_email.clone();
+        let content = row.content.clone();
+        let status = row.status.clone();
+        tokio::spawn(async move {
+            notifier
+                .send_new_comment(
+                    &slug,
+                    &post_title,
+                    &author_name,
+                    author_email.as_deref(),
+                    &content,
+                    &status,
+                )
+                .await;
+        });
+    }
+
     Ok(Json(row))
 }
 

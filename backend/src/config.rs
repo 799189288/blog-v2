@@ -13,6 +13,28 @@ pub struct Config {
     pub upload_dir: String,
     pub max_upload_bytes: usize,
     pub comment_blocklist: Vec<String>,
+    pub smtp: Option<SmtpCfg>,
+}
+
+/// SMTP credentials + sender/recipient for new-comment notifications.
+/// Entirely optional: when any of SMTP_HOST / SMTP_FROM / SMTP_TO is
+/// missing, notifications are silently disabled (`smtp = None`).
+#[derive(Clone, Debug)]
+pub struct SmtpCfg {
+    pub host: String,
+    pub port: u16,
+    /// Username for SMTP AUTH. If empty, no auth is sent (useful for
+    /// localhost relays).
+    pub username: String,
+    pub password: String,
+    /// `From:` header. Most providers require this to match the
+    /// authenticated user or a verified sender.
+    pub from: String,
+    /// Where to deliver new-comment alerts — the blog operator's inbox.
+    pub to: String,
+    /// `true` (default) → STARTTLS on port 587; `false` → implicit TLS on
+    /// 465. Plain SMTP without TLS is intentionally unsupported.
+    pub starttls: bool,
 }
 
 impl Config {
@@ -51,6 +73,35 @@ impl Config {
             .filter(|s| !s.is_empty())
             .collect();
 
+        // SMTP is optional. We require the three "who" fields (host,
+        // from, to) to enable it — username/password are blank for
+        // unauthenticated relays. Missing any of the three → notifications
+        // are turned off and we log it once at startup elsewhere.
+        let smtp = (|| {
+            let host = env::var("SMTP_HOST").ok().filter(|s| !s.is_empty())?;
+            let from = env::var("SMTP_FROM").ok().filter(|s| !s.is_empty())?;
+            let to = env::var("SMTP_TO").ok().filter(|s| !s.is_empty())?;
+            let port = env::var("SMTP_PORT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(587);
+            let username = env::var("SMTP_USERNAME").unwrap_or_default();
+            let password = env::var("SMTP_PASSWORD").unwrap_or_default();
+            let starttls = env::var("SMTP_STARTTLS")
+                .ok()
+                .map(|v| !matches!(v.to_lowercase().as_str(), "false" | "0" | "no"))
+                .unwrap_or(true);
+            Some(SmtpCfg {
+                host,
+                port,
+                username,
+                password,
+                from,
+                to,
+                starttls,
+            })
+        })();
+
         Ok(Self {
             bind_addr,
             database_url,
@@ -63,6 +114,7 @@ impl Config {
             upload_dir,
             max_upload_bytes,
             comment_blocklist,
+            smtp,
         })
     }
 }

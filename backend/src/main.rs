@@ -5,6 +5,7 @@ mod error;
 mod handlers;
 mod markdown;
 mod models;
+mod notify;
 mod routes;
 mod state;
 
@@ -43,6 +44,22 @@ async fn main() -> anyhow::Result<()> {
     std::fs::create_dir_all(&config.upload_dir)
         .with_context(|| format!("creating upload dir {}", config.upload_dir))?;
 
+    // Build the optional comment-notification mailer. We refuse to start
+    // if SMTP is configured but invalid — better than discovering it on
+    // the first comment.
+    let notifier = match &config.smtp {
+        Some(smtp_cfg) => {
+            let n = notify::Notifier::from_cfg(smtp_cfg, &config.site_url, &config.site_title)
+                .context("initializing SMTP notifier")?;
+            tracing::info!(host = %smtp_cfg.host, to = %smtp_cfg.to, "comment notifications enabled");
+            Some(n)
+        }
+        None => {
+            tracing::info!("SMTP not configured — new-comment notifications disabled");
+            None
+        }
+    };
+
     let state = AppState::new(
         pool,
         config.jwt_secret.clone(),
@@ -56,6 +73,7 @@ async fn main() -> anyhow::Result<()> {
             max_bytes: config.max_upload_bytes,
         },
         config.comment_blocklist.clone(),
+        notifier,
     );
 
     let app = routes::build(state, &config);

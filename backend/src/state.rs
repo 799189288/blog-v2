@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 use crate::models::dict::DictItemPublic;
+use crate::notify::Notifier;
 
 const VIEW_DEDUPE_TTL: Duration = Duration::from_secs(30 * 60);
 const VIEW_DEDUPE_CLEANUP_THRESHOLD: usize = 10_000;
@@ -35,6 +36,9 @@ pub struct AppState {
     pub uploads: Arc<UploadCfg>,
     /// Lowercased substring tokens that flag a comment as spam on submit.
     pub comment_blocklist: Arc<Vec<String>>,
+    /// `None` when SMTP isn't configured — submit handler treats sending
+    /// as a no-op rather than special-casing.
+    pub notifier: Option<Notifier>,
     /// Per-type cache of enabled dict items. Cleared on any admin write.
     pub dict_cache: Arc<RwLock<HashMap<String, Arc<Vec<DictItemPublic>>>>>,
     /// In-memory dedupe of recent post views, keyed by "slug|ip".
@@ -51,6 +55,7 @@ impl AppState {
         site: SiteInfo,
         uploads: UploadCfg,
         comment_blocklist: Vec<String>,
+        notifier: Option<Notifier>,
     ) -> Self {
         Self {
             db,
@@ -58,6 +63,7 @@ impl AppState {
             site: Arc::new(site),
             uploads: Arc::new(uploads),
             comment_blocklist: Arc::new(comment_blocklist),
+            notifier,
             dict_cache: Arc::new(RwLock::new(HashMap::new())),
             view_dedupe: Arc::new(Mutex::new(HashMap::new())),
             comment_dedupe: Arc::new(Mutex::new(HashMap::new())),
