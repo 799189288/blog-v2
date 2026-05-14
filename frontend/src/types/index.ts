@@ -46,6 +46,19 @@ export interface PostNav {
   related: RelatedPost[]
 }
 
+export interface ArchiveEntry {
+  slug: string
+  title: string
+  published_at: string
+}
+
+export interface ArchiveGroup {
+  year_month: string
+  year: number
+  month: number
+  posts: ArchiveEntry[]
+}
+
 export interface Paginated<T> {
   items: T[]
   page: number

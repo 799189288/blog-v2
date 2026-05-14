@@ -9,6 +9,7 @@ const routes = [
       { path: 'post/:slug', name: 'post', component: () => import('../views/PostView.vue'), props: true },
       { path: 'tag/:slug', name: 'tag', component: () => import('../views/TagView.vue'), props: true },
       { path: 'search', name: 'search', component: () => import('../views/SearchView.vue') },
+      { path: 'archive', name: 'archive', component: () => import('../views/ArchiveView.vue') },
     ],
   },
 ]

@@ -19,6 +19,7 @@ use crate::{auth::require_admin, config::Config, handlers, state::AppState};
 pub fn build(state: AppState, config: &Config) -> Router {
     let public = Router::new()
         .route("/posts", get(handlers::posts::list_published))
+        .route("/posts/archive", get(handlers::posts::archive))
         .route("/posts/:slug", get(handlers::posts::get_by_slug))
         .route("/posts/:slug/related", get(handlers::posts::related))
         .route("/posts/:slug/comments", get(handlers::comments::list_approved))

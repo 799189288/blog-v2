@@ -14,10 +14,12 @@ import {
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, type Locale } from '../i18n'
+import { useTheme, type ThemeMode } from '../composables/useTheme'
 
 const auth = useAuthStore()
 const router = useRouter()
 const { t, locale } = useI18n()
+const { mode: themeMode, cycle: cycleTheme } = useTheme()
 
 function icon(comp: any) { return () => h(NIcon, null, () => h(comp)) }
 
@@ -72,6 +74,15 @@ const currentLangLabel = computed(() => (locale.value === 'zh' ? t('language.zh'
 function onLangSelect(key: string) {
   setLocale(key as Locale)
 }
+
+const themeIcon = computed(() => {
+  const m: ThemeMode = themeMode.value
+  return m === 'auto' ? '🖥' : m === 'light' ? '☀' : '☾'
+})
+const themeTitle = computed(() => {
+  const m: ThemeMode = themeMode.value
+  return t(`theme.${m}`) + ' — ' + t('theme.clickToCycle')
+})
 </script>
 
 <template>
@@ -83,6 +94,13 @@ function onLangSelect(key: string) {
     <NLayout>
       <NLayoutHeader bordered style="padding: 12px 24px;">
         <NSpace justify="end" align="center">
+          <button
+            type="button"
+            class="theme-btn"
+            :title="themeTitle"
+            :aria-label="themeTitle"
+            @click="cycleTheme"
+          >{{ themeIcon }}</button>
           <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
             <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
           </NDropdown>
@@ -99,7 +117,8 @@ function onLangSelect(key: string) {
 
 <style scoped>
 .brand { padding: 18px 20px; font-weight: 600; font-size: 16px; }
-.lang-btn {
+.lang-btn,
+.theme-btn {
   background: transparent;
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 4px;
@@ -108,5 +127,13 @@ function onLangSelect(key: string) {
   font: inherit;
   color: inherit;
 }
-.lang-btn:hover { border-color: rgba(127, 127, 127, 0.6); }
+.lang-btn:hover,
+.theme-btn:hover { border-color: rgba(127, 127, 127, 0.6); }
+.theme-btn {
+  min-width: 34px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
+}
 </style>

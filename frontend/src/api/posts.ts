@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Paginated, PostDetail, PostNav, PostSummary } from '../types'
+import type { ArchiveGroup, Paginated, PostDetail, PostNav, PostSummary } from '../types'
 
 export async function listPublished(params: { page?: number; per_page?: number; tag?: string } = {}) {
   const { data } = await api.get<Paginated<PostSummary>>('/posts', { params })
@@ -20,5 +20,10 @@ export async function getRelated(slug: string) {
 
 export async function search(q: string, page = 1) {
   const { data } = await api.get<Paginated<PostSummary>>('/search', { params: { q, page } })
+  return data
+}
+
+export async function archive() {
+  const { data } = await api.get<ArchiveGroup[]>('/posts/archive')
   return data
 }

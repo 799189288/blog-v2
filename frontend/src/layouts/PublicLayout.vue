@@ -4,10 +4,12 @@ import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NInput, NDropdow
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { setLocale, type Locale } from '../i18n'
+import { useTheme, type ThemeMode } from '../composables/useTheme'
 
 const router = useRouter()
 const query = ref('')
 const { t, locale } = useI18n()
+const { mode: themeMode, cycle: cycleTheme } = useTheme()
 
 function onSearch() {
   const q = query.value.trim()
@@ -24,13 +26,27 @@ const currentLangLabel = computed(() => (locale.value === 'zh' ? t('language.zh'
 function onLangSelect(key: string) {
   setLocale(key as Locale)
 }
+
+// One glyph per state — auto follows the OS so we show a system-ish
+// icon, sun for forced light, moon for forced dark.
+const themeIcon = computed(() => {
+  const m: ThemeMode = themeMode.value
+  return m === 'auto' ? '🖥' : m === 'light' ? '☀' : '☾'
+})
+const themeTitle = computed(() => {
+  const m: ThemeMode = themeMode.value
+  return t(`theme.${m}`) + ' — ' + t('theme.clickToCycle')
+})
 </script>
 
 <template>
   <NLayout class="root-layout">
     <NLayoutHeader bordered style="padding: 14px 24px;">
       <div class="header-inner">
-        <RouterLink :to="{ name: 'home' }" class="brand">{{ t('layout.brand') }}</RouterLink>
+        <div class="header-left">
+          <RouterLink :to="{ name: 'home' }" class="brand">{{ t('layout.brand') }}</RouterLink>
+          <RouterLink :to="{ name: 'archive' }" class="nav-link">{{ t('layout.archive') }}</RouterLink>
+        </div>
         <div class="header-right">
           <NInput
             v-model:value="query"
@@ -40,6 +56,15 @@ function onLangSelect(key: string) {
             style="width: 220px"
             @keyup.enter="onSearch"
           />
+          <button
+            type="button"
+            class="theme-btn"
+            :title="themeTitle"
+            :aria-label="themeTitle"
+            @click="cycleTheme"
+          >
+            {{ themeIcon }}
+          </button>
           <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
             <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
           </NDropdown>
@@ -90,7 +115,21 @@ function onLangSelect(key: string) {
   font-size: 18px;
   text-decoration: none;
 }
-.lang-btn {
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+.nav-link {
+  text-decoration: none;
+  font-size: 14px;
+  opacity: 0.75;
+  color: inherit;
+}
+.nav-link:hover { opacity: 1; }
+.nav-link.router-link-active { opacity: 1; font-weight: 500; }
+.lang-btn,
+.theme-btn {
   background: transparent;
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 4px;
@@ -99,8 +138,17 @@ function onLangSelect(key: string) {
   font: inherit;
   color: inherit;
 }
-.lang-btn:hover {
+.lang-btn:hover,
+.theme-btn:hover {
   border-color: rgba(127, 127, 127, 0.6);
+}
+.theme-btn {
+  /* Keep glyphs centered regardless of which one renders. */
+  min-width: 34px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
 }
 .content-wrap {
   max-width: 960px;

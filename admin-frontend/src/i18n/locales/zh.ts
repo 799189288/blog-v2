@@ -323,4 +323,10 @@ export default {
     deleteItemTitle: '删除字典项',
     deleteItemConfirm: '确定删除字典项 "{code}"？此操作不可撤销。',
   },
+  theme: {
+    auto: '跟随系统',
+    light: '浅色模式',
+    dark: '深色模式',
+    clickToCycle: '点击切换',
+  },
 }

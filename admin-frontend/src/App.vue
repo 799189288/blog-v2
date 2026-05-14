@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import {
   NConfigProvider,
   NMessageProvider,
@@ -9,14 +9,10 @@ import {
   zhCN, enUS, dateZhCN, dateEnUS,
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from './composables/useTheme'
 
-const dark = ref(false)
-onMounted(() => {
-  const mq = window.matchMedia('(prefers-color-scheme: dark)')
-  dark.value = mq.matches
-  mq.addEventListener('change', e => { dark.value = e.matches })
-})
-const theme = computed(() => (dark.value ? darkTheme : null))
+const { isDark } = useTheme()
+const theme = computed(() => (isDark.value ? darkTheme : null))
 
 const { locale } = useI18n()
 const naiveLocale = computed(() => (locale.value === 'zh' ? zhCN : enUS))

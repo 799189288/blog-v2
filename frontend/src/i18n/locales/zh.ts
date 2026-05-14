@@ -8,6 +8,7 @@ export default {
   layout: {
     brand: '首页',
     searchPlaceholder: '搜索文章...',
+    archive: '归档',
   },
   home: {
     emptyPosts: '暂无文章',
@@ -39,6 +40,11 @@ export default {
     emptyPosts: '该标签下暂无文章',
     notFound: '标签不存在',
   },
+  archive: {
+    title: '归档',
+    empty: '暂无已发布文章。',
+    totalCount: '共 {count} 篇',
+  },
   comments: {
     empty: '还没有评论，来抢沙发吧！',
   },
@@ -59,5 +65,11 @@ export default {
     label: '语言',
     en: 'English',
     zh: '中文',
+  },
+  theme: {
+    auto: '跟随系统',
+    light: '浅色模式',
+    dark: '深色模式',
+    clickToCycle: '点击切换',
   },
 }

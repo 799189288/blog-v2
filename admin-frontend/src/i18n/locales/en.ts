@@ -323,4 +323,10 @@ export default {
     deleteItemTitle: 'Delete dict item',
     deleteItemConfirm: 'Delete item "{code}"? This cannot be undone.',
   },
+  theme: {
+    auto: 'Follow system',
+    light: 'Light mode',
+    dark: 'Dark mode',
+    clickToCycle: 'click to switch',
+  },
 }

@@ -4,16 +4,32 @@ import { useRouter } from 'vue-router'
 import {
   NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, NAlert, useMessage,
 } from 'naive-ui'
-import { MdEditor } from 'md-editor-v3'
+import { MdEditor, config } from 'md-editor-v3'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import { useI18n } from 'vue-i18n'
 import * as postsApi from '../../api/posts'
 import { useDictStore } from '../../stores/dict'
+import { useTheme } from '../../composables/useTheme'
+
+// Enable $...$ / $$...$$ math rendering via KaTeX. md-editor-v3 looks
+// up the katex instance from this global config the first time it
+// renders a math block; safe to call on every component mount.
+config({
+  editorExtensions: {
+    katex: { instance: katex },
+  },
+})
 
 const props = defineProps<{ id?: string }>()
 const router = useRouter()
 const message = useMessage()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const dict = useDictStore()
+const { isDark } = useTheme()
+
+const editorTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'))
+const editorLang = computed<'zh-CN' | 'en-US'>(() => (locale.value === 'zh' ? 'zh-CN' : 'en-US'))
 
 const isEdit = computed(() => !!props.id)
 const loading = ref(false)
@@ -167,6 +183,8 @@ async function copyPreviewUrl() {
           v-model="form.content_md"
           :preview-only="false"
           :on-upload-img="onUploadImg"
+          :theme="editorTheme"
+          :language="editorLang"
           style="height: 540px; width: 100%;"
         />
       </NFormItem>

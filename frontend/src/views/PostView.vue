@@ -4,6 +4,8 @@ import { NSpin, NTag, NSpace, NDivider } from 'naive-ui'
 import { RouterLink, useRoute } from 'vue-router'
 import { MdPreview, MdCatalog, config } from 'md-editor-v3'
 import mermaid from 'mermaid'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as postsApi from '../api/posts'
@@ -12,11 +14,13 @@ import CommentList from '../components/CommentList.vue'
 import CommentForm from '../components/CommentForm.vue'
 import BackButton from '../components/BackButton.vue'
 import { useHead } from '../composables/useHead'
+import { useTheme } from '../composables/useTheme'
 import type { PostDetail, Comment, PostNav } from '../types'
 
 config({
   editorExtensions: {
     mermaid: { instance: mermaid },
+    katex: { instance: katex },
   },
 })
 
@@ -35,9 +39,8 @@ const loading = ref(true)
 const notFound = ref(false)
 
 const editorLang = computed<'zh-CN' | 'en-US'>(() => (locale.value === 'zh' ? 'zh-CN' : 'en-US'))
-const editorTheme = computed<'light' | 'dark'>(() =>
-  window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-)
+const { isDark } = useTheme()
+const editorTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'))
 
 // Optional preview token from the URL. Drafts only — the admin shares
 // `?token=...` URLs so a draft post can be reviewed before publishing.

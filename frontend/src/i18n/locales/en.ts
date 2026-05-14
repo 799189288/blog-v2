@@ -8,6 +8,7 @@ export default {
   layout: {
     brand: 'Home',
     searchPlaceholder: 'Search posts...',
+    archive: 'Archive',
   },
   home: {
     emptyPosts: 'No posts yet',
@@ -39,6 +40,11 @@ export default {
     emptyPosts: 'No posts in this tag',
     notFound: 'Tag not found',
   },
+  archive: {
+    title: 'Archive',
+    empty: 'No published posts yet.',
+    totalCount: '{count} posts',
+  },
   comments: {
     empty: 'No comments yet. Be the first!',
   },
@@ -59,5 +65,11 @@ export default {
     label: 'Language',
     en: 'English',
     zh: '中文',
+  },
+  theme: {
+    auto: 'Follow system',
+    light: 'Light mode',
+    dark: 'Dark mode',
+    clickToCycle: 'click to switch',
   },
 }

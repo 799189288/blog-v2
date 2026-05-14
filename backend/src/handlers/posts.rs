@@ -302,6 +302,63 @@ pub async fn related(
     }))
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct ArchiveEntry {
+    pub slug: String,
+    pub title: String,
+    #[serde(with = "time::serde::rfc3339")]
+    pub published_at: OffsetDateTime,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ArchiveGroup {
+    /// "2026-05" — string keyed because clients sort + dedupe in render.
+    pub year_month: String,
+    pub year: i32,
+    pub month: u8,
+    pub posts: Vec<ArchiveEntry>,
+}
+
+/// All published posts, newest first, grouped by year-month in the
+/// response. Cheap enough to compute in one pass over the whole posts
+/// table (this is a personal blog; even a few thousand posts is trivial)
+/// so we don't bother paginating.
+pub async fn archive(State(state): State<AppState>) -> AppResult<Json<Vec<ArchiveGroup>>> {
+    let rows = sqlx::query_as::<_, (String, String, OffsetDateTime)>(
+        r#"
+        SELECT slug, title, published_at
+        FROM posts
+        WHERE status = 'published' AND published_at IS NOT NULL
+        ORDER BY published_at DESC, id DESC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let mut groups: Vec<ArchiveGroup> = Vec::new();
+    for (slug, title, published_at) in rows {
+        let year = published_at.year();
+        let month: u8 = published_at.month().into();
+        let key = format!("{year:04}-{month:02}");
+        let entry = ArchiveEntry {
+            slug,
+            title,
+            published_at,
+        };
+        match groups.last_mut() {
+            Some(g) if g.year_month == key => g.posts.push(entry),
+            _ => groups.push(ArchiveGroup {
+                year_month: key,
+                year,
+                month,
+                posts: vec![entry],
+            }),
+        }
+    }
+
+    Ok(Json(groups))
+}
+
 pub(crate) async fn load_tags_for_post(state: &AppState, post_id: i64) -> AppResult<Vec<Tag>> {
     let tags = sqlx::query_as::<_, Tag>(
         r#"
