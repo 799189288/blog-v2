@@ -22,6 +22,13 @@ use crate::{
 
 use super::posts::{load_tags_for_post, load_tags_for_posts};
 
+/// Generate a fresh preview token. We use uuid v4's hex form (32 chars,
+/// 128 bits) — plenty of entropy to make guessing infeasible, and it
+/// fits cleanly into a URL without escaping.
+fn gen_preview_token() -> String {
+    uuid::Uuid::new_v4().simple().to_string()
+}
+
 #[derive(Debug, Serialize)]
 pub struct AdminPostsResponse {
     pub items: Vec<PostSummary>,
@@ -88,6 +95,7 @@ pub async fn get_by_id(
         views: post.views,
         word_count: post.word_count,
         reading_time_min: post.reading_time_min,
+        preview_token: post.preview_token,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,
@@ -130,13 +138,20 @@ pub async fn create(
     } else {
         None
     };
+    // Drafts get a private preview token so the author can share an
+    // unlisted URL. Published posts don't need one (they're public).
+    let preview_token: Option<String> = if status == "draft" {
+        Some(gen_preview_token())
+    } else {
+        None
+    };
 
     let mut tx = state.db.begin().await?;
 
     let post = sqlx::query_as::<_, Post>(
         r#"
-        INSERT INTO posts (slug, title, excerpt, content_md, content_html, status, author_id, published_at, word_count, reading_time_min)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        INSERT INTO posts (slug, title, excerpt, content_md, content_html, status, author_id, published_at, word_count, reading_time_min, preview_token)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
         "#,
     )
@@ -150,6 +165,7 @@ pub async fn create(
     .bind(published_at)
     .bind(word_count)
     .bind(reading_time)
+    .bind(preview_token.as_deref())
     .fetch_one(&mut *tx)
     .await
     .map_err(map_slug_conflict)?;
@@ -180,6 +196,7 @@ pub async fn create(
         views: post.views,
         word_count: post.word_count,
         reading_time_min: post.reading_time_min,
+        preview_token: post.preview_token,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,
@@ -231,12 +248,27 @@ pub async fn update(
     } else {
         None
     };
+    // Preview token lifecycle:
+    //   published → published : carry forward (always None anyway)
+    //   draft     → draft     : keep the existing token so a shared link
+    //                           still works after edits
+    //   published → draft     : mint a fresh token
+    //   draft     → published : drop the token (post is now public)
+    let preview_token: Option<String> = if new_status == "draft" {
+        existing
+            .preview_token
+            .clone()
+            .or_else(|| Some(gen_preview_token()))
+    } else {
+        None
+    };
 
     let post = sqlx::query_as::<_, Post>(
         r#"
         UPDATE posts
         SET slug = $2, title = $3, excerpt = $4, content_md = $5, content_html = $6,
             status = $7, published_at = $8, word_count = $9, reading_time_min = $10,
+            preview_token = $11,
             updated_at = now()
         WHERE id = $1
         RETURNING *
@@ -252,6 +284,7 @@ pub async fn update(
     .bind(published_at)
     .bind(markdown::word_count(&content_md) as i32)
     .bind(markdown::reading_time_min(&content_md))
+    .bind(preview_token.as_deref())
     .fetch_one(&mut *tx)
     .await
     .map_err(map_slug_conflict)?;
@@ -296,6 +329,7 @@ pub async fn update(
         views: post.views,
         word_count: post.word_count,
         reading_time_min: post.reading_time_min,
+        preview_token: post.preview_token,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,

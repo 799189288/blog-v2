@@ -6,8 +6,10 @@ export async function listPublished(params: { page?: number; per_page?: number; 
   return data
 }
 
-export async function getBySlug(slug: string) {
-  const { data } = await api.get<PostDetail>(`/posts/${encodeURIComponent(slug)}`)
+export async function getBySlug(slug: string, token?: string) {
+  const { data } = await api.get<PostDetail>(`/posts/${encodeURIComponent(slug)}`, {
+    params: token ? { token } : undefined,
+  })
   return data
 }
 

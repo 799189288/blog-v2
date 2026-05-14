@@ -138,6 +138,9 @@ export interface PostDetail extends PostSummary {
   content_md: string
   content_html: string
   updated_at: string
+  /// Present on drafts so the admin can copy a private preview URL.
+  /// Always null on published posts.
+  preview_token: string | null
 }
 
 export interface PostInput {

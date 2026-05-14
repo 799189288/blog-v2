@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, useMessage,
+  NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, NAlert, useMessage,
 } from 'naive-ui'
 import { MdEditor } from 'md-editor-v3'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +19,10 @@ const isEdit = computed(() => !!props.id)
 const loading = ref(false)
 const saving = ref(false)
 
+// Public site origin. Defaults to the dev port; override with
+// VITE_PUBLIC_SITE_URL=https://yourdomain.com at build time for prod.
+const PUBLIC_SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined) ?? 'http://localhost:5178'
+
 const form = reactive({
   title: '',
   slug: '',
@@ -26,6 +30,15 @@ const form = reactive({
   content_md: '',
   status: 'draft' as 'draft' | 'published',
   tags: [] as string[],
+})
+
+// Only meaningful on drafts; cleared on every fresh load.
+const previewToken = ref<string | null>(null)
+
+const previewUrl = computed(() => {
+  if (form.status !== 'draft' || !previewToken.value || !form.slug) return null
+  const slug = encodeURIComponent(form.slug)
+  return `${PUBLIC_SITE_URL}/post/${slug}?token=${previewToken.value}`
 })
 
 const statusOptions = computed(() => dict.options('post.status').value)
@@ -51,6 +64,7 @@ async function onUploadImg(files: File[], callback: (urls: string[]) => void) {
 async function load() {
   if (!props.id) return
   loading.value = true
+  previewToken.value = null
   try {
     const p = await postsApi.adminGet(Number(props.id))
     form.title = p.title
@@ -59,6 +73,7 @@ async function load() {
     form.content_md = p.content_md
     form.status = p.status
     form.tags = p.tags.map(tg => tg.name)
+    previewToken.value = p.preview_token
   } catch (e: any) {
     message.error(e?.response?.data?.error ?? t('postEdit.loadFailed'))
   } finally {
@@ -87,10 +102,12 @@ async function save() {
       tags: form.tags,
     }
     if (isEdit.value) {
-      await postsApi.adminUpdate(Number(props.id), payload)
+      const updated = await postsApi.adminUpdate(Number(props.id), payload)
+      previewToken.value = updated.preview_token
       message.success(t('postEdit.saved'))
     } else {
       const created = await postsApi.adminCreate(payload)
+      previewToken.value = created.preview_token
       message.success(t('postEdit.created'))
       router.replace({ name: 'manage-post-edit', params: { id: created.id } })
     }
@@ -98,6 +115,16 @@ async function save() {
     message.error(e?.response?.data?.error ?? t('common.saveFailed'))
   } finally {
     saving.value = false
+  }
+}
+
+async function copyPreviewUrl() {
+  if (!previewUrl.value) return
+  try {
+    await navigator.clipboard.writeText(previewUrl.value)
+    message.success(t('postEdit.previewCopied'))
+  } catch {
+    message.error(t('postEdit.previewCopyFailed'))
   }
 }
 </script>
@@ -121,6 +148,20 @@ async function save() {
       <NFormItem :label="t('postEdit.fields.status')">
         <NSelect v-model:value="form.status" :options="statusOptions" style="max-width: 200px;" />
       </NFormItem>
+      <NAlert
+        v-if="previewUrl"
+        type="info"
+        :show-icon="false"
+        style="margin-bottom: 18px;"
+      >
+        <div class="preview-row">
+          <div class="preview-text">
+            <div class="preview-label">{{ t('postEdit.previewLabel') }}</div>
+            <a :href="previewUrl" target="_blank" rel="noopener" class="preview-link">{{ previewUrl }}</a>
+          </div>
+          <NButton size="small" @click="copyPreviewUrl">{{ t('postEdit.previewCopy') }}</NButton>
+        </div>
+      </NAlert>
       <NFormItem :label="t('postEdit.fields.content')" required>
         <MdEditor
           v-model="form.content_md"
@@ -136,3 +177,25 @@ async function save() {
     </NForm>
   </NSpin>
 </template>
+
+<style scoped>
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.preview-text {
+  min-width: 0;
+  flex: 1;
+}
+.preview-label {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+.preview-link {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+</style>

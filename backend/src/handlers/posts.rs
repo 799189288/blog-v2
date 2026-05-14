@@ -122,36 +122,61 @@ pub async fn list_published(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GetBySlugQuery {
+    /// Preview token. When present and matching a draft post's stored
+    /// token, the draft is returned; otherwise drafts 404.
+    pub token: Option<String>,
+}
+
 pub async fn get_by_slug(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Path(slug): Path<String>,
+    Query(q): Query<GetBySlugQuery>,
 ) -> AppResult<Json<PostDetail>> {
+    // Two paths share most of the code:
+    //   * Normal: only published posts; bump views with per-IP dedupe.
+    //   * Preview: draft with a matching ?token=. Never bump views —
+    //     the author is checking their own draft.
     let ip = client_ip(&headers, addr);
-    let should_count = state.should_count_view(&slug, &ip);
 
-    // Bump views only when this is a fresh view; otherwise return the row as-is.
-    // WHERE on status keeps drafts hidden either way.
-    let post = if should_count {
+    let post = if let Some(token) = q.token.as_deref().filter(|s| !s.is_empty()) {
         sqlx::query_as::<_, Post>(
             r#"
-            UPDATE posts
-            SET views = views + 1
-            WHERE slug = $1 AND status = 'published'
-            RETURNING *
+            SELECT * FROM posts
+            WHERE slug = $1
+              AND status = 'draft'
+              AND preview_token = $2
             "#,
         )
         .bind(&slug)
+        .bind(token)
         .fetch_optional(&state.db)
         .await?
     } else {
-        sqlx::query_as::<_, Post>(
-            r#"SELECT * FROM posts WHERE slug = $1 AND status = 'published'"#,
-        )
-        .bind(&slug)
-        .fetch_optional(&state.db)
-        .await?
+        let should_count = state.should_count_view(&slug, &ip);
+        if should_count {
+            sqlx::query_as::<_, Post>(
+                r#"
+                UPDATE posts
+                SET views = views + 1
+                WHERE slug = $1 AND status = 'published'
+                RETURNING *
+                "#,
+            )
+            .bind(&slug)
+            .fetch_optional(&state.db)
+            .await?
+        } else {
+            sqlx::query_as::<_, Post>(
+                r#"SELECT * FROM posts WHERE slug = $1 AND status = 'published'"#,
+            )
+            .bind(&slug)
+            .fetch_optional(&state.db)
+            .await?
+        }
     }
     .ok_or(AppError::NotFound)?;
 
@@ -167,6 +192,9 @@ pub async fn get_by_slug(
         views: post.views,
         word_count: post.word_count,
         reading_time_min: post.reading_time_min,
+        // Don't leak the token back through the public response — readers
+        // get URL-only access; the admin path returns it separately.
+        preview_token: None,
         published_at: post.published_at,
         created_at: post.created_at,
         updated_at: post.updated_at,

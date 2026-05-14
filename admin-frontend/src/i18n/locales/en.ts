@@ -164,6 +164,10 @@ export default {
     created: 'Created',
     loadFailed: 'Failed to load post',
     uploadFailed: 'Image upload failed',
+    previewLabel: 'Draft preview link (share with reviewers — does not bump views)',
+    previewCopy: 'Copy',
+    previewCopied: 'Preview link copied',
+    previewCopyFailed: 'Could not copy to clipboard',
   },
   moderation: {
     title: 'Comment moderation',

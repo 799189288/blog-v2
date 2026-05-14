@@ -39,20 +39,36 @@ const editorTheme = computed<'light' | 'dark'>(() =>
   window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
 )
 
+// Optional preview token from the URL. Drafts only — the admin shares
+// `?token=...` URLs so a draft post can be reviewed before publishing.
+const previewToken = computed(() => {
+  const t = route.query.token
+  return typeof t === 'string' && t.length > 0 ? t : undefined
+})
+
+const isDraftPreview = computed(() => post.value?.status === 'draft')
+
 async function load() {
   loading.value = true
   notFound.value = false
   nav.value = null
   try {
-    post.value = await postsApi.getBySlug(props.slug)
-    // Fetch comments + nav in parallel — both depend only on slug, and
-    // nav loading shouldn't block the comments section from rendering.
-    const [c, n] = await Promise.allSettled([
-      commentsApi.listApproved(props.slug),
-      postsApi.getRelated(props.slug),
-    ])
-    comments.value = c.status === 'fulfilled' ? c.value : []
-    nav.value = n.status === 'fulfilled' ? n.value : null
+    post.value = await postsApi.getBySlug(props.slug, previewToken.value)
+    if (isDraftPreview.value) {
+      // Draft previews don't show comments (post isn't public; comment
+      // table joins on published posts) and skip the related-posts call.
+      comments.value = []
+      nav.value = null
+    } else {
+      // Fetch comments + nav in parallel — both depend only on slug, and
+      // nav loading shouldn't block the comments section from rendering.
+      const [c, n] = await Promise.allSettled([
+        commentsApi.listApproved(props.slug),
+        postsApi.getRelated(props.slug),
+      ])
+      comments.value = c.status === 'fulfilled' ? c.value : []
+      nav.value = n.status === 'fulfilled' ? n.value : null
+    }
   } catch (e: any) {
     if (e?.response?.status === 404) notFound.value = true
     else throw e
@@ -63,6 +79,7 @@ async function load() {
 
 onMounted(load)
 watch(() => route.params.slug, load)
+watch(() => route.query.token, load)
 
 useHead(() => ({
   title: post.value?.title,
@@ -82,6 +99,9 @@ async function reloadComments() {
       <NSpin :show="loading">
         <div v-if="notFound" class="not-found">{{ $t('post.notFound') }}</div>
         <article v-else-if="post">
+          <div v-if="isDraftPreview" class="draft-banner" role="status">
+            {{ $t('post.draftBanner') }}
+          </div>
           <h1>{{ post.title }}</h1>
           <div class="meta">
             <span v-if="post.published_at">{{ dayjs(post.published_at).format('YYYY-MM-DD') }}</span>
@@ -111,50 +131,52 @@ async function reloadComments() {
             class="post-md-preview"
           />
 
-          <NDivider />
+          <template v-if="!isDraftPreview">
+            <NDivider />
 
-          <nav v-if="nav && (nav.prev || nav.next)" class="prev-next" :aria-label="$t('post.navAria')">
-            <RouterLink
-              v-if="nav.prev"
-              :to="{ name: 'post', params: { slug: nav.prev.slug } }"
-              class="nav-link nav-prev"
-            >
-              <div class="nav-label">← {{ $t('post.prev') }}</div>
-              <div class="nav-title">{{ nav.prev.title }}</div>
-            </RouterLink>
-            <span v-else class="nav-spacer" />
-            <RouterLink
-              v-if="nav.next"
-              :to="{ name: 'post', params: { slug: nav.next.slug } }"
-              class="nav-link nav-next"
-            >
-              <div class="nav-label">{{ $t('post.next') }} →</div>
-              <div class="nav-title">{{ nav.next.title }}</div>
-            </RouterLink>
-            <span v-else class="nav-spacer" />
-          </nav>
+            <nav v-if="nav && (nav.prev || nav.next)" class="prev-next" :aria-label="$t('post.navAria')">
+              <RouterLink
+                v-if="nav.prev"
+                :to="{ name: 'post', params: { slug: nav.prev.slug } }"
+                class="nav-link nav-prev"
+              >
+                <div class="nav-label">← {{ $t('post.prev') }}</div>
+                <div class="nav-title">{{ nav.prev.title }}</div>
+              </RouterLink>
+              <span v-else class="nav-spacer" />
+              <RouterLink
+                v-if="nav.next"
+                :to="{ name: 'post', params: { slug: nav.next.slug } }"
+                class="nav-link nav-next"
+              >
+                <div class="nav-label">{{ $t('post.next') }} →</div>
+                <div class="nav-title">{{ nav.next.title }}</div>
+              </RouterLink>
+              <span v-else class="nav-spacer" />
+            </nav>
 
-          <section v-if="nav && nav.related.length" class="related">
-            <h3>{{ $t('post.related') }}</h3>
-            <ul class="related-list">
-              <li v-for="r in nav.related" :key="r.slug">
-                <RouterLink :to="{ name: 'post', params: { slug: r.slug } }" class="related-link">
-                  <div class="related-title">{{ r.title }}</div>
-                  <div v-if="r.excerpt" class="related-excerpt">{{ r.excerpt }}</div>
-                </RouterLink>
-              </li>
-            </ul>
-          </section>
+            <section v-if="nav && nav.related.length" class="related">
+              <h3>{{ $t('post.related') }}</h3>
+              <ul class="related-list">
+                <li v-for="r in nav.related" :key="r.slug">
+                  <RouterLink :to="{ name: 'post', params: { slug: r.slug } }" class="related-link">
+                    <div class="related-title">{{ r.title }}</div>
+                    <div v-if="r.excerpt" class="related-excerpt">{{ r.excerpt }}</div>
+                  </RouterLink>
+                </li>
+              </ul>
+            </section>
 
-          <NDivider v-if="nav && (nav.prev || nav.next || nav.related.length)" />
+            <NDivider v-if="nav && (nav.prev || nav.next || nav.related.length)" />
 
-          <h3>{{ $t('post.comments', { count: comments.length }) }}</h3>
-          <CommentList :comments="comments" :slug="post.slug" @submitted="reloadComments" />
+            <h3>{{ $t('post.comments', { count: comments.length }) }}</h3>
+            <CommentList :comments="comments" :slug="post.slug" @submitted="reloadComments" />
 
-          <NDivider />
+            <NDivider />
 
-          <h3>{{ $t('post.leaveComment') }}</h3>
-          <CommentForm :slug="post.slug" @submitted="reloadComments" />
+            <h3>{{ $t('post.leaveComment') }}</h3>
+            <CommentForm :slug="post.slug" @submitted="reloadComments" />
+          </template>
         </article>
       </NSpin>
     </div>
@@ -250,6 +272,15 @@ async function reloadComments() {
 }
 
 .meta { font-size: 13px; opacity: 0.7; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.draft-banner {
+  background: rgba(240, 160, 32, 0.12);
+  border: 1px solid rgba(240, 160, 32, 0.5);
+  color: #b86d00;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
 .views { display: inline-flex; align-items: center; gap: 4px; }
 .views .eye { font-size: 14px; }
 .reading-time { display: inline-flex; align-items: center; gap: 4px; }

@@ -164,6 +164,10 @@ export default {
     created: '已创建',
     loadFailed: '加载文章失败',
     uploadFailed: '图片上传失败',
+    previewLabel: '草稿预览链接（可分享给审阅者；不会增加浏览量）',
+    previewCopy: '复制',
+    previewCopied: '预览链接已复制',
+    previewCopyFailed: '复制到剪贴板失败',
   },
   moderation: {
     title: '评论审核',

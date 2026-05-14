@@ -27,6 +27,7 @@ export default {
     navAria: 'Post navigation',
     related: 'Related posts',
     toc: 'Contents',
+    draftBanner: 'Draft preview — this post is not public yet. The link will keep working until the post is published.',
   },
   search: {
     title: 'Search',

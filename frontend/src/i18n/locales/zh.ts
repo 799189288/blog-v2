@@ -27,6 +27,7 @@ export default {
     navAria: '文章导航',
     related: '相关文章',
     toc: '目录',
+    draftBanner: '草稿预览 — 这篇文章尚未公开发布。链接在文章发布之前可一直使用。',
   },
   search: {
     title: '搜索',
