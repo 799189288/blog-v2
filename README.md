@@ -14,31 +14,35 @@ A self-hosted personal blog with a public reader site, a dedicated admin SPA, an
 
 - Tagged posts, paginated home, tag pages, full-text search (PostgreSQL `tsvector`)
 - Markdown rendering with GFM (tables, task lists, strikethrough, footnotes, autolinks)
-- Mermaid diagrams in posts
+- Mermaid diagrams + **KaTeX math** (`$...$` inline, `$$...$$` block)
+- **Archive page** at `/archive` — every published post grouped by year-month
 - Per-post **view counter** with per-IP 30-minute dedupe (no F5-farming)
 - **Reading time** + word count (CJK-aware)
 - **Table of contents** sidebar (sticky, viewport-fixed, hidden on narrow screens)
 - **Related posts** (shared-tag scored) + **prev/next** navigation
+- **Dark mode** toggle — three states (auto / light / dark), persists in localStorage; both SPAs
 - Threaded comments with moderation queue
 - **SEO**: dynamic `<title>` / `og:*` / `twitter:*` per page
 - **RSS feed** at `/rss.xml`, **sitemap** at `/sitemap.xml`
 
 ### Writing & moderation (admin)
 
-- Markdown editor with live preview, syntax highlighting, Mermaid
+- Markdown editor with live preview, syntax highlighting, Mermaid, KaTeX
 - **Image upload** (multipart, image/\* only, UUID-renamed) — drag/paste/toolbar in the editor
 - Posts: draft / publish, tags, slug, excerpt (auto if blank)
+- **Draft preview links** — share a private `?token=...` URL with reviewers; rotated when a post leaves and re-enters draft, dropped on publish
 - Comment moderation: pending queue, approve / spam / delete
 - Tag management, dashboard with charts, raw data tables (posts/comments/tags/users)
 - **Dictionary** system for enum-style options (post status, comment status, …) editable from the UI
 - **Audit log** for every write
 - User management (create / reset password / delete)
 
-### Anti-spam
+### Anti-spam & operator alerts
 
 - **Honeypot** field on the public comment form (hidden via CSS+aria, server discards anything filled)
 - **Per-IP rate limit** (30 s between comments)
 - **Keyword blocklist** (`COMMENT_BLOCKLIST` env var) — matches route the comment to `status='spam'` instead of `pending`
+- **Email notifications** via SMTP — fire-and-forget per new comment; subject tags spam-vs-pending so the operator can ignore noise
 
 ## Project layout
 
@@ -93,7 +97,13 @@ Key `.env` settings:
 | `UPLOAD_DIR` | `./uploads` | Where uploaded images land (auto-created) |
 | `MAX_UPLOAD_BYTES` | `5242880` | Per-upload cap (5 MB) |
 | `COMMENT_BLOCKLIST` | _(empty)_ | Comma-separated lowercased substrings; matches → `status='spam'` |
+| `SMTP_HOST` / `SMTP_FROM` / `SMTP_TO` | _(empty)_ | All three must be set to enable new-comment email alerts |
+| `SMTP_PORT` | `587` | Override to `465` for implicit TLS |
+| `SMTP_STARTTLS` | `true` | Set `false` for implicit TLS on 465 (QQ Mail, etc.) |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | _(empty)_ | Blank → no AUTH; otherwise the SMTP credentials |
 | `RUST_LOG` | `info` | Tracing filter |
+
+The admin SPA also reads one build-time variable: `VITE_PUBLIC_SITE_URL` (default `http://localhost:5178`) — used to build the absolute draft preview URLs the admin shows. Set this to your public domain when running `npm run build` in production.
 
 ### 3. Run the backend
 
@@ -153,7 +163,8 @@ Login at `http://localhost:5180/login` using the credentials from step 4.
 | Method | Path | Notes |
 |---|---|---|
 | `GET`  | `/api/posts?page=&per_page=&tag=` | Paginated, published only |
-| `GET`  | `/api/posts/:slug` | Single post; bumps `views` (with IP dedupe) |
+| `GET`  | `/api/posts/archive` | All published posts grouped by year-month |
+| `GET`  | `/api/posts/:slug` | Single post; bumps `views` (with IP dedupe). With `?token=...` returns the matching draft |
 | `GET`  | `/api/posts/:slug/related` | `{prev, next, related}` |
 | `GET`  | `/api/posts/:slug/comments` | Approved comments |
 | `POST` | `/api/posts/:slug/comments` | Submit (lands in `pending` or `spam`) |
@@ -248,12 +259,11 @@ The simple-config fallback already works fine for Latin-script content and short
 | `0004_seed_more_audit_actions.sql` | More audit action labels |
 | `0005_post_views.sql` | `posts.views` counter |
 | `0006_post_reading_metrics.sql` | `posts.word_count` + `reading_time_min` (with backfill) |
+| `0007_post_preview_token.sql` | `posts.preview_token` for unlisted draft preview URLs |
 
 ## What's NOT included (intentional)
 
 - **Multi-user roles** — a single `admin` is enough for a personal blog; the schema has room to grow if you need it.
-- **Email notifications** for new comments — straightforward to bolt on (SMTP client + new-comment hook) but not done.
-- **Draft preview links** — drafts are admin-only; sharing a draft for review needs a token-gated public route.
 - **CSRF middleware** — not needed because auth is Bearer JWT, not cookies.
 - **2FA on admin login.**
 - **Per-author bylines** — every post is implicitly authored by the single admin.
