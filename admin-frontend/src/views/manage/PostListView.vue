@@ -54,7 +54,14 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
   {
     title: t('managePosts.cols.title'), key: 'title',
     render(row) {
-      return h(RouterLink, { to: { name: 'manage-post-edit', params: { id: row.id } } }, () => row.title)
+      return h(
+        RouterLink,
+        {
+          to: { name: 'manage-post-edit', params: { id: row.id } },
+          class: 'row-link',
+        },
+        () => row.title,
+      )
     },
   },
   {
@@ -85,3 +92,18 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
   </div>
   <NDataTable :columns="columns" :data="posts" :loading="loading" :row-key="(r: PostSummary) => r.id" />
 </template>
+
+<style scoped>
+/* RouterLink renders as <a>, which the UA paints in its default link
+   color (blue/purple, including :visited). That's invisible against the
+   dark theme. Inherit the surrounding theme text color and let Naive UI
+   decide the actual hue; underline on hover keeps the affordance. */
+:deep(.row-link) {
+  color: inherit;
+  text-decoration: none;
+}
+:deep(.row-link:hover) {
+  text-decoration: underline;
+  color: var(--n-text-color-hover, inherit);
+}
+</style>
