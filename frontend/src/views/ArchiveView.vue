@@ -65,6 +65,7 @@ function formatHeader(g: ArchiveGroup): string {
   align-items: baseline;
   gap: 10px;
   margin: 0 0 24px;
+  flex-wrap: wrap;
 }
 .count {
   font-size: 14px;
@@ -110,5 +111,10 @@ function formatHeader(g: ArchiveGroup): string {
 }
 .post-title:hover {
   text-decoration: underline;
+}
+@media (max-width: 480px) {
+  .post-list li { gap: 10px; flex-wrap: wrap; }
+  .post-date { min-width: 0; }
+  .group-header { font-size: 15px; }
 }
 </style>

@@ -1,65 +1,31 @@
 <script setup lang="ts">
-import { computed, h } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { RouterView, useRouter, useRoute } from 'vue-router'
 import {
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent,
-  NMenu, NSpace, NButton, NIcon, NDropdown,
+  NSpace, NButton, NDropdown, NDrawer, NDrawerContent,
 } from 'naive-ui'
-import type { MenuOption } from 'naive-ui'
-import {
-  StatsChartOutline, DocumentTextOutline, ChatbubbleOutline,
-  PricetagsOutline, PeopleOutline, PersonCircleOutline, ListOutline,
-  CreateOutline, BookOutline, SettingsOutline,
-} from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, type Locale } from '../i18n'
 import { useTheme, type ThemeMode } from '../composables/useTheme'
+import { useBreakpoint } from '../composables/useBreakpoint'
+import AdminNavMenu from '../components/AdminNavMenu.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const { t, locale } = useI18n()
 const { mode: themeMode, cycle: cycleTheme } = useTheme()
+const { isMobile } = useBreakpoint()
 
-function icon(comp: any) { return () => h(NIcon, null, () => h(comp)) }
+const drawerOpen = ref(false)
 
-const menuOptions = computed<MenuOption[]>(() => [
-  { label: () => h(RouterLink, { to: { name: 'dashboard' } }, () => t('menu.dashboard')), key: 'dashboard', icon: icon(StatsChartOutline) },
-  {
-    label: t('menu.content'),
-    key: 'manage',
-    icon: icon(CreateOutline),
-    children: [
-      { label: () => h(RouterLink, { to: { name: 'manage-posts' } }, () => t('menu.posts')), key: 'manage-posts', icon: icon(DocumentTextOutline) },
-      { label: () => h(RouterLink, { to: { name: 'manage-post-new' } }, () => t('menu.newPost')), key: 'manage-post-new', icon: icon(CreateOutline) },
-      { label: () => h(RouterLink, { to: { name: 'manage-tags' } }, () => t('menu.tags')), key: 'manage-tags', icon: icon(PricetagsOutline) },
-      { label: () => h(RouterLink, { to: { name: 'manage-comments' } }, () => t('menu.commentModeration')), key: 'manage-comments', icon: icon(ChatbubbleOutline) },
-    ],
-  },
-  {
-    label: t('menu.browseData'),
-    key: 'data',
-    icon: icon(ListOutline),
-    children: [
-      { label: () => h(RouterLink, { to: { name: 'data-posts' } }, () => t('menu.dataPosts')), key: 'data-posts', icon: icon(DocumentTextOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-comments' } }, () => t('menu.dataComments')), key: 'data-comments', icon: icon(ChatbubbleOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-tags' } }, () => t('menu.dataTags')), key: 'data-tags', icon: icon(PricetagsOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-users' } }, () => t('menu.dataUsers')), key: 'data-users', icon: icon(PeopleOutline) },
-    ],
-  },
-  { label: () => h(RouterLink, { to: { name: 'users' } }, () => t('menu.userManagement')), key: 'users', icon: icon(PersonCircleOutline) },
-  {
-    label: t('menu.system'),
-    key: 'system',
-    icon: icon(SettingsOutline),
-    children: [
-      { label: () => h(RouterLink, { to: { name: 'dict' } }, () => t('menu.dict')), key: 'dict', icon: icon(BookOutline) },
-      { label: () => h(RouterLink, { to: { name: 'audit' } }, () => t('menu.auditLog')), key: 'audit', icon: icon(ListOutline) },
-    ],
-  },
-])
-
-const active = computed(() => router.currentRoute.value.name as string)
+// Close the drawer whenever we navigate (a menu selection triggered the
+// route change) or when the viewport grows past the mobile breakpoint
+// (e.g. user rotates a tablet or resizes the desktop window).
+watch(() => route.fullPath, () => { drawerOpen.value = false })
+watch(isMobile, m => { if (!m) drawerOpen.value = false })
 
 function onLogout() {
   auth.logout()
@@ -87,13 +53,28 @@ const themeTitle = computed(() => {
 
 <template>
   <NLayout has-sider style="min-height: 100vh">
-    <NLayoutSider bordered :width="240" :collapsed-width="64" show-trigger="bar">
-      <div class="brand">{{ t('layout.brand') }}</div>
-      <NMenu :options="menuOptions" :value="active" :indent="18" />
+    <NLayoutSider
+      v-if="!isMobile"
+      bordered
+      :width="240"
+      :collapsed-width="64"
+      show-trigger="bar"
+    >
+      <AdminNavMenu />
     </NLayoutSider>
     <NLayout>
-      <NLayoutHeader bordered style="padding: 12px 24px;">
-        <NSpace justify="end" align="center">
+      <NLayoutHeader bordered class="admin-header">
+        <div class="header-left">
+          <NButton
+            v-if="isMobile"
+            quaternary
+            size="small"
+            class="hamburger"
+            :aria-label="t('mobile.menu')"
+            @click="drawerOpen = true"
+          >☰</NButton>
+        </div>
+        <NSpace class="header-right" align="center" :wrap="true">
           <button
             type="button"
             class="theme-btn"
@@ -104,19 +85,46 @@ const themeTitle = computed(() => {
           <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
             <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
           </NDropdown>
-          <span v-if="auth.user">{{ auth.user.username }} ({{ auth.user.role }})</span>
+          <span v-if="auth.user && !isMobile" class="user-tag">
+            {{ auth.user.username }} ({{ auth.user.role }})
+          </span>
           <NButton size="small" @click="onLogout">{{ t('layout.logout') }}</NButton>
         </NSpace>
       </NLayoutHeader>
-      <NLayoutContent style="padding: 24px;">
+      <NLayoutContent class="admin-content">
         <RouterView />
       </NLayoutContent>
     </NLayout>
   </NLayout>
+
+  <NDrawer
+    v-if="isMobile"
+    v-model:show="drawerOpen"
+    placement="left"
+    :width="280"
+  >
+    <NDrawerContent :title="t('layout.brand')" closable>
+      <AdminNavMenu @navigate="drawerOpen = false" />
+    </NDrawerContent>
+  </NDrawer>
 </template>
 
 <style scoped>
-.brand { padding: 18px 20px; font-weight: 600; font-size: 16px; }
+.admin-header {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.header-left { display: flex; align-items: center; }
+.header-right { flex: 0 1 auto; justify-content: flex-end; }
+.hamburger {
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 10px;
+  height: 32px;
+}
 .lang-btn,
 .theme-btn {
   background: transparent;
@@ -135,5 +143,11 @@ const themeTitle = computed(() => {
   font-size: 16px;
   line-height: 1;
   padding: 4px 8px;
+}
+.user-tag { font-size: 13px; opacity: 0.75; }
+.admin-content { padding: 24px; }
+@media (max-width: 768px) {
+  .admin-header { padding: 10px 14px; }
+  .admin-content { padding: 16px 12px; }
 }
 </style>

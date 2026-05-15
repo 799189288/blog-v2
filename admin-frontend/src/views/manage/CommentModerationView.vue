@@ -9,11 +9,14 @@ import dayjs from 'dayjs'
 import * as commentsApi from '../../api/comments'
 import type { Comment } from '../../types'
 import { useDictStore } from '../../stores/dict'
+import { useBreakpoint } from '../../composables/useBreakpoint'
+import MobileRowCard from '../../components/MobileRowCard.vue'
 
 const dialog = useDialog()
 const message = useMessage()
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 
 const status = ref<'pending' | 'approved' | 'spam' | 'all'>('pending')
 const rows = ref<Comment[]>([])
@@ -96,14 +99,71 @@ const columns = computed<DataTableColumns<Comment>>(() => [
 </script>
 
 <template>
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h2 style="margin: 0">{{ t('moderation.title') }}</h2>
-    <NRadioGroup v-model:value="status" size="small">
+  <div class="page-header">
+    <h2 class="page-title">{{ t('moderation.title') }}</h2>
+    <NRadioGroup v-model:value="status" size="small" class="filter-radios">
       <NRadioButton value="pending">{{ t('moderation.statuses.pending') }}</NRadioButton>
       <NRadioButton value="approved">{{ t('moderation.statuses.approved') }}</NRadioButton>
       <NRadioButton value="spam">{{ t('moderation.statuses.spam') }}</NRadioButton>
       <NRadioButton value="all">{{ t('moderation.statuses.all') }}</NRadioButton>
     </NRadioGroup>
   </div>
-  <NDataTable :columns="columns" :data="rows" :loading="loading" :row-key="(r: Comment) => r.id" />
+  <NDataTable
+    v-if="!isMobile"
+    :columns="columns"
+    :data="rows"
+    :loading="loading"
+    :row-key="(r: Comment) => r.id"
+  />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="c in rows" :key="c.id">
+      <template #title>
+        {{ c.author_name }}
+        <span v-if="c.author_email" class="m-email">{{ c.author_email }}</span>
+      </template>
+      <template #body>
+        <div class="m-content">{{ c.content }}</div>
+        <div v-if="c.parent_id" class="muted">
+          @{{ c.parent_author_name ?? `#${c.parent_id}` }}
+        </div>
+        <div class="m-line">
+          <NTag
+            :type="c.status === 'approved' ? 'success' : c.status === 'spam' ? 'error' : 'warning'"
+            size="small"
+          >
+            {{ dict.label('comment.status', c.status) }}
+          </NTag>
+          <span class="muted">{{ dayjs(c.created_at).format('YYYY-MM-DD HH:mm') }}</span>
+        </div>
+      </template>
+      <template #actions>
+        <NButton v-if="c.status !== 'approved'" size="small" type="primary" @click="setStatus(c, 'approved')">
+          {{ t('moderation.approve') }}
+        </NButton>
+        <NButton v-if="c.status !== 'spam'" size="small" @click="setStatus(c, 'spam')">
+          {{ t('moderation.markSpam') }}
+        </NButton>
+        <NButton size="small" type="error" ghost @click="confirmDelete(c)">
+          {{ t('common.delete') }}
+        </NButton>
+      </template>
+    </MobileRowCard>
+  </div>
 </template>
+
+<style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.page-title { margin: 0; }
+.filter-radios { display: inline-flex; flex-wrap: wrap; }
+.m-email { font-size: 12px; opacity: 0.65; font-weight: 400; margin-left: 6px; }
+.m-content { white-space: pre-wrap; word-break: break-word; }
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+</style>

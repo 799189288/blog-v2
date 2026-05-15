@@ -8,12 +8,15 @@ import dayjs from 'dayjs'
 import * as postsApi from '../../api/posts'
 import type { PostSummary } from '../../types'
 import { useDictStore } from '../../stores/dict'
+import { useBreakpoint } from '../../composables/useBreakpoint'
+import MobileRowCard from '../../components/MobileRowCard.vue'
 
 const router = useRouter()
 const dialog = useDialog()
 const message = useMessage()
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 
 const posts = ref<PostSummary[]>([])
 const loading = ref(false)
@@ -86,14 +89,60 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
 </script>
 
 <template>
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h2 style="margin: 0">{{ t('managePosts.title') }}</h2>
+  <div class="page-header">
+    <h2 class="page-title">{{ t('managePosts.title') }}</h2>
     <NButton type="primary" @click="router.push({ name: 'manage-post-new' })">{{ t('managePosts.newPost') }}</NButton>
   </div>
-  <NDataTable :columns="columns" :data="posts" :loading="loading" :row-key="(r: PostSummary) => r.id" />
+  <NDataTable
+    v-if="!isMobile"
+    :columns="columns"
+    :data="posts"
+    :loading="loading"
+    :row-key="(r: PostSummary) => r.id"
+  />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="p in posts" :key="p.id">
+      <template #title>
+        <RouterLink :to="{ name: 'manage-post-edit', params: { id: p.id } }" class="row-link">
+          {{ p.title }}
+        </RouterLink>
+      </template>
+      <template #body>
+        <div class="m-line">
+          <NTag :type="p.status === 'published' ? 'success' : 'default'" size="small">
+            {{ dict.label('post.status', p.status) }}
+          </NTag>
+          <span v-if="p.published_at" class="muted">
+            {{ dayjs(p.published_at).format('YYYY-MM-DD') }}
+          </span>
+          <span class="muted">👁 {{ p.views }}</span>
+        </div>
+        <div v-if="p.tags.length" class="m-line muted">
+          {{ p.tags.map(tg => tg.name).join(', ') }}
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="router.push({ name: 'manage-post-edit', params: { id: p.id } })">
+          {{ t('common.edit') }}
+        </NButton>
+        <NButton size="small" type="error" ghost @click="confirmDelete(p)">
+          {{ t('common.delete') }}
+        </NButton>
+      </template>
+    </MobileRowCard>
+  </div>
 </template>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.page-title { margin: 0; }
 /* RouterLink renders as <a>, which the UA paints in its default link
    color (blue/purple, including :visited). That's invisible against the
    dark theme. Inherit the surrounding theme text color and let Naive UI
@@ -106,4 +155,16 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
   text-decoration: underline;
   color: var(--n-text-color-hover, inherit);
 }
+.row-link {
+  color: inherit;
+  text-decoration: none;
+}
+.row-link:hover { text-decoration: underline; }
+.m-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+.muted { opacity: 0.7; font-size: 12px; }
 </style>

@@ -2,7 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, NAlert, useMessage,
+  NForm, NFormItem, NInput, NDynamicTags, NSelect, NButton, NSpace, NSpin, NAlert,
+  NCard, NResult, useMessage,
 } from 'naive-ui'
 import { MdEditor, config } from 'md-editor-v3'
 import katex from 'katex'
@@ -11,6 +12,7 @@ import { useI18n } from 'vue-i18n'
 import * as postsApi from '../../api/posts'
 import { useDictStore } from '../../stores/dict'
 import { useTheme } from '../../composables/useTheme'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 // Enable $...$ / $$...$$ math rendering via KaTeX. md-editor-v3 looks
 // up the katex instance from this global config the first time it
@@ -27,6 +29,7 @@ const message = useMessage()
 const { t, locale } = useI18n()
 const dict = useDictStore()
 const { isDark } = useTheme()
+const { isMobile } = useBreakpoint()
 
 const editorTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'))
 const editorLang = computed<'zh-CN' | 'en-US'>(() => (locale.value === 'zh' ? 'zh-CN' : 'en-US'))
@@ -147,64 +150,95 @@ async function copyPreviewUrl() {
 
 <template>
   <NSpin :show="loading">
-    <h2 style="margin-top: 0">{{ isEdit ? t('postEdit.titleEdit') : t('postEdit.titleNew') }}</h2>
-    <NForm label-placement="top">
-      <NFormItem :label="t('postEdit.fields.title')" required>
-        <NInput v-model:value="form.title" maxlength="200" />
-      </NFormItem>
-      <NFormItem :label="t('postEdit.fields.slug')">
-        <NInput v-model:value="form.slug" :placeholder="t('postEdit.fields.slugPlaceholder')" />
-      </NFormItem>
-      <NFormItem :label="t('postEdit.fields.excerpt')">
-        <NInput v-model:value="form.excerpt" type="textarea" :rows="2" />
-      </NFormItem>
-      <NFormItem :label="t('postEdit.fields.tags')">
-        <NDynamicTags v-model:value="form.tags" />
-      </NFormItem>
-      <NFormItem :label="t('postEdit.fields.status')">
-        <NSelect v-model:value="form.status" :options="statusOptions" style="max-width: 200px;" />
-      </NFormItem>
-      <NAlert
-        v-if="previewUrl"
-        type="info"
-        :show-icon="false"
-        style="margin-bottom: 18px;"
-      >
-        <div class="preview-row">
-          <div class="preview-text">
-            <div class="preview-label">{{ t('postEdit.previewLabel') }}</div>
-            <a :href="previewUrl" target="_blank" rel="noopener" class="preview-link">{{ previewUrl }}</a>
+    <div v-if="isMobile" class="mobile-block">
+      <NCard>
+        <NResult
+          status="info"
+          :title="t('mobile.editorBlockTitle')"
+          :description="t('mobile.editorBlockDesc')"
+        >
+          <template #footer>
+            <NSpace justify="center" :wrap="true">
+              <NButton @click="router.push({ name: 'manage-posts' })">
+                {{ t('common.backToList') }}
+              </NButton>
+              <NButton
+                v-if="isEdit && form.slug && form.status === 'published'"
+                tag="a"
+                :href="`${PUBLIC_SITE_URL}/post/${form.slug}`"
+                target="_blank"
+                rel="noopener"
+              >
+                {{ t('mobile.viewPost') }}
+              </NButton>
+            </NSpace>
+          </template>
+        </NResult>
+      </NCard>
+    </div>
+    <template v-else>
+      <h2 class="page-title">{{ isEdit ? t('postEdit.titleEdit') : t('postEdit.titleNew') }}</h2>
+      <NForm label-placement="top">
+        <NFormItem :label="t('postEdit.fields.title')" required>
+          <NInput v-model:value="form.title" maxlength="200" />
+        </NFormItem>
+        <NFormItem :label="t('postEdit.fields.slug')">
+          <NInput v-model:value="form.slug" :placeholder="t('postEdit.fields.slugPlaceholder')" />
+        </NFormItem>
+        <NFormItem :label="t('postEdit.fields.excerpt')">
+          <NInput v-model:value="form.excerpt" type="textarea" :rows="2" />
+        </NFormItem>
+        <NFormItem :label="t('postEdit.fields.tags')">
+          <NDynamicTags v-model:value="form.tags" />
+        </NFormItem>
+        <NFormItem :label="t('postEdit.fields.status')">
+          <NSelect v-model:value="form.status" :options="statusOptions" style="max-width: 200px;" />
+        </NFormItem>
+        <NAlert
+          v-if="previewUrl"
+          type="info"
+          :show-icon="false"
+          style="margin-bottom: 18px;"
+        >
+          <div class="preview-row">
+            <div class="preview-text">
+              <div class="preview-label">{{ t('postEdit.previewLabel') }}</div>
+              <a :href="previewUrl" target="_blank" rel="noopener" class="preview-link">{{ previewUrl }}</a>
+            </div>
+            <NButton size="small" @click="copyPreviewUrl">{{ t('postEdit.previewCopy') }}</NButton>
           </div>
-          <NButton size="small" @click="copyPreviewUrl">{{ t('postEdit.previewCopy') }}</NButton>
-        </div>
-      </NAlert>
-      <NFormItem :label="t('postEdit.fields.content')" required>
-        <MdEditor
-          v-model="form.content_md"
-          :preview-only="false"
-          :on-upload-img="onUploadImg"
-          :theme="editorTheme"
-          :language="editorLang"
-          style="height: 540px; width: 100%;"
-        />
-      </NFormItem>
-      <NSpace>
-        <NButton type="primary" :loading="saving" @click="save">{{ t('common.save') }}</NButton>
-        <NButton @click="router.push({ name: 'manage-posts' })">{{ t('common.cancel') }}</NButton>
-      </NSpace>
-    </NForm>
+        </NAlert>
+        <NFormItem :label="t('postEdit.fields.content')" required>
+          <MdEditor
+            v-model="form.content_md"
+            :preview-only="false"
+            :on-upload-img="onUploadImg"
+            :theme="editorTheme"
+            :language="editorLang"
+            style="height: 540px; width: 100%;"
+          />
+        </NFormItem>
+        <NSpace>
+          <NButton type="primary" :loading="saving" @click="save">{{ t('common.save') }}</NButton>
+          <NButton @click="router.push({ name: 'manage-posts' })">{{ t('common.cancel') }}</NButton>
+        </NSpace>
+      </NForm>
+    </template>
   </NSpin>
 </template>
 
 <style scoped>
+.page-title { margin-top: 0; }
+.mobile-block { padding: 8px 0; }
 .preview-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .preview-text {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 200px;
 }
 .preview-label {
   font-size: 12px;

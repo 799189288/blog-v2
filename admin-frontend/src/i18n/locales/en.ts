@@ -19,6 +19,14 @@ export default {
     failed: 'Failed',
     saveFailed: 'Save failed',
     loadFailed: 'Failed to load',
+    backToList: 'Back to list',
+    viewDetails: 'View',
+  },
+  mobile: {
+    editorBlockTitle: 'Editing not available on mobile',
+    editorBlockDesc: 'Please open this page on a desktop device to edit posts. The Markdown editor, tag picker, and image uploads are not suitable for small screens.',
+    viewPost: 'View post',
+    menu: 'Menu',
   },
   layout: {
     brand: 'Blog Console',

@@ -35,7 +35,7 @@ async function onSubmit() {
 
 <template>
   <div class="wrap">
-    <NCard :title="t('login.title')" style="width: 380px;">
+    <NCard :title="t('login.title')" class="login-card">
       <p style="margin-top: 0; opacity: 0.7; font-size: 14px;">{{ t('login.subtitle') }}</p>
       <NForm @submit.prevent="onSubmit">
         <NFormItem :label="t('login.username')">
@@ -59,5 +59,12 @@ async function onSubmit() {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
+}
+.login-card {
+  width: 380px;
+  max-width: 94vw;
+}
+@media (max-width: 480px) {
+  .wrap { padding: 16px; }
 }
 </style>

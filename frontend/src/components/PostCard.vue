@@ -22,7 +22,7 @@ defineProps<{ post: PostSummary }>()
       <span v-if="post.reading_time_min > 0" class="reading-time" :title="$t('post.readingTime')">
         ⏱ {{ $t('post.readingTimeShort', { min: post.reading_time_min }) }}
       </span>
-      <NSpace :size="6" inline style="margin-left: 12px;">
+      <NSpace :size="6" inline class="meta-tags">
         <RouterLink
           v-for="t in post.tags"
           :key="t.id"
@@ -45,11 +45,17 @@ defineProps<{ post: PostSummary }>()
 .title { margin: 0 0 4px; font-size: 22px; }
 .title a { text-decoration: none; }
 .title a:hover { text-decoration: underline; }
-.meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; gap: 12px; }
+.meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.meta-tags { margin-left: 12px; }
 .views { display: inline-flex; align-items: center; gap: 4px; }
 .views .eye { font-size: 14px; }
 .reading-time { display: inline-flex; align-items: center; gap: 4px; }
 .excerpt { margin: 8px 0 0; }
 .tag-link { text-decoration: none; cursor: pointer; }
 .tag-link :deep(.n-tag) { cursor: pointer; }
+@media (max-width: 768px) {
+  .title { font-size: 18px; }
+  .meta { gap: 8px 10px; font-size: 12px; }
+  .meta-tags { margin-left: 0; }
+}
 </style>

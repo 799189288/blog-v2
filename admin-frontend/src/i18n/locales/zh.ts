@@ -19,6 +19,14 @@ export default {
     failed: '操作失败',
     saveFailed: '保存失败',
     loadFailed: '加载失败',
+    backToList: '返回列表',
+    viewDetails: '查看',
+  },
+  mobile: {
+    editorBlockTitle: '移动端不支持编辑',
+    editorBlockDesc: '请在桌面设备上打开此页面以编辑文章。Markdown 编辑器、标签选择和图片上传在小屏幕上无法正常使用。',
+    viewPost: '查看文章',
+    menu: '菜单',
   },
   layout: {
     brand: '博客后台',

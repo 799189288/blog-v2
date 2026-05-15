@@ -280,6 +280,8 @@ function commentStatusType(s: string): 'default' | 'success' | 'warning' | 'erro
 .section-header {
   display: flex; justify-content: space-between; align-items: center;
   margin: 24px 0 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .todo-card { position: relative; }
@@ -339,4 +341,9 @@ function commentStatusType(s: string): 'default' | 'success' | 'warning' | 'erro
 }
 .tag-chip:hover { background: rgba(127, 127, 127, 0.12); }
 .tag-count { font-size: 0.7em; opacity: 0.5; margin-left: 2px; }
+@media (max-width: 768px) {
+  .top-list li { flex-wrap: wrap; gap: 8px; }
+  .top-meta { flex-basis: 100%; gap: 10px; padding-left: 30px; }
+  .top-title { white-space: normal; }
+}
 </style>

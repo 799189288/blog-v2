@@ -87,4 +87,8 @@ const emit = defineEmits<{
   background: rgba(127, 127, 127, 0.06);
   border-radius: 6px;
 }
+@media (max-width: 480px) {
+  .children { padding-left: 12px; }
+  .reply-form { padding: 10px; }
+}
 </style>

@@ -9,11 +9,14 @@ import { useI18n } from 'vue-i18n'
 import * as dictApi from '../api/dict'
 import type { DictType, DictItem } from '../api/dict'
 import { useDictStore } from '../stores/dict'
+import { useBreakpoint } from '../composables/useBreakpoint'
+import MobileRowCard from '../components/MobileRowCard.vue'
 
 const { t } = useI18n()
 const dialog = useDialog()
 const message = useMessage()
 const dictStore = useDictStore()
+const { isMobile } = useBreakpoint()
 
 const types = ref<DictType[]>([])
 const selected = ref<DictType | null>(null)
@@ -323,13 +326,38 @@ const typeCodeReadonly = computed(() => !!editingType.value && (editingType.valu
       </template>
       <NEmpty v-if="!selected" :description="t('manageDict.pickType')" />
       <NDataTable
-        v-else
+        v-else-if="!isMobile"
         :columns="itemColumns"
         :data="items"
         :loading="loadingItems"
         :row-key="(r: DictItem) => r.id"
         size="small"
       />
+      <div v-else class="m-list">
+        <MobileRowCard v-for="i in items" :key="i.id">
+          <template #title>{{ i.code }}</template>
+          <template #body>
+            <div class="muted">{{ i.label_zh }} / {{ i.label_en }}</div>
+            <div class="m-line">
+              <span class="muted">sort {{ i.sort }}</span>
+              <NTag v-if="i.enabled" size="small" type="success">{{ t('manageDict.enabled') }}</NTag>
+              <NTag v-else size="small">{{ t('manageDict.disabled') }}</NTag>
+            </div>
+          </template>
+          <template #actions>
+            <NButton size="small" @click="openEditItem(i)">{{ t('common.edit') }}</NButton>
+            <NButton
+              size="small"
+              type="error"
+              ghost
+              :disabled="selected?.is_system ?? false"
+              @click="confirmDeleteItem(i)"
+            >
+              {{ t('common.delete') }}
+            </NButton>
+          </template>
+        </MobileRowCard>
+      </div>
     </NCard>
   </div>
 
@@ -338,7 +366,7 @@ const typeCodeReadonly = computed(() => !!editingType.value && (editingType.valu
     v-model:show="typeOpen"
     preset="card"
     :title="editingType ? t('manageDict.editTypeTitle') : t('manageDict.createTypeTitle')"
-    style="width: 480px;"
+    :style="{ width: isMobile ? '94vw' : '480px', maxWidth: '94vw' }"
   >
     <NForm label-placement="top">
       <NFormItem :label="t('manageDict.fields.code')" required>
@@ -362,7 +390,7 @@ const typeCodeReadonly = computed(() => !!editingType.value && (editingType.valu
     v-model:show="itemOpen"
     preset="card"
     :title="editingItem ? t('manageDict.editItemTitle') : t('manageDict.createItemTitle')"
-    style="width: 480px;"
+    :style="{ width: isMobile ? '94vw' : '480px', maxWidth: '94vw' }"
   >
     <NForm label-placement="top">
       <NFormItem :label="t('manageDict.fields.code')" required>
@@ -399,4 +427,9 @@ const typeCodeReadonly = computed(() => !!editingType.value && (editingType.valu
   .dict-layout { grid-template-columns: 1fr; }
 }
 .types-card :deep(.n-data-table) { font-size: 13px; }
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+@media (max-width: 768px) {
+  .dict-layout { grid-template-columns: 1fr; }
+}
 </style>

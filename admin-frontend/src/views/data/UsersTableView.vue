@@ -7,10 +7,13 @@ import dayjs from 'dayjs'
 import * as dataApi from '../../api/data'
 import type { UserRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
+import MobileRowCard from '../../components/MobileRowCard.vue'
 import { useDictStore } from '../../stores/dict'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 const rows = ref<UserRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -55,11 +58,12 @@ const columns = computed<DataTableColumns<UserRow>>(() => [
 </script>
 
 <template>
-  <h2 style="margin-top: 0">{{ t('dataUsers.title') }}</h2>
+  <h2 class="page-title">{{ t('dataUsers.title') }}</h2>
   <NSpace style="margin-bottom: 12px;">
     <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
   <NDataTable
+    v-if="!isMobile"
     remote
     :columns="columns"
     :data="rows"
@@ -73,5 +77,38 @@ const columns = computed<DataTableColumns<UserRow>>(() => [
     }"
     @update:sorter="onSorterChange"
   />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="r in rows" :key="r.id">
+      <template #title>{{ r.username }}</template>
+      <template #body>
+        <div class="m-line">
+          <NTag size="small" type="info">{{ dict.label('user.role', r.role) }}</NTag>
+          <span class="muted">{{ dayjs(r.created_at).format('YYYY-MM-DD HH:mm') }}</span>
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="openDetail(r)">{{ t('common.viewDetails') }}</NButton>
+      </template>
+    </MobileRowCard>
+    <div class="mobile-pager">
+      <NButton size="small" :disabled="page <= 1" @click="page = page - 1; load()">‹</NButton>
+      <span class="page-info">{{ page }} / {{ Math.max(1, Math.ceil(total / perPage)) }}</span>
+      <NButton size="small" :disabled="page * perPage >= total" @click="page = page + 1; load()">›</NButton>
+    </div>
+  </div>
   <RowDetailDrawer v-model:show="drawer" :title="t('dataUsers.drawerTitle')" :data="detail" />
 </template>
+
+<style scoped>
+.page-title { margin-top: 0; }
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+.mobile-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.page-info { font-size: 13px; }
+</style>

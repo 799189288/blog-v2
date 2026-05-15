@@ -9,10 +9,13 @@ import dayjs from 'dayjs'
 import * as dataApi from '../../api/data'
 import type { PostBrowseRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
+import MobileRowCard from '../../components/MobileRowCard.vue'
 import { useDictStore } from '../../stores/dict'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 const rows = ref<PostBrowseRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -82,15 +85,16 @@ const columns = computed<DataTableColumns<PostBrowseRow>>(() => [
 </script>
 
 <template>
-  <h2 style="margin-top: 0">{{ t('dataPosts.title') }}</h2>
+  <h2 class="page-title">{{ t('dataPosts.title') }}</h2>
 
-  <NSpace style="margin-bottom: 12px;" :size="12" align="center">
-    <NInput v-model:value="q" :placeholder="t('dataPosts.searchPlaceholder')" clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
-    <NSelect v-model:value="status" :options="statusOptions" :placeholder="t('dataPosts.statusPlaceholder')" style="width: 160px;" clearable @update:value="() => { page = 1; load() }" />
+  <NSpace class="filter-row" :size="12" align="center" :wrap="true">
+    <NInput v-model:value="q" :placeholder="t('dataPosts.searchPlaceholder')" clearable class="filter-input" @update:value="() => { page = 1; load() }" />
+    <NSelect v-model:value="status" :options="statusOptions" :placeholder="t('dataPosts.statusPlaceholder')" class="filter-select" clearable @update:value="() => { page = 1; load() }" />
     <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
 
   <NDataTable
+    v-if="!isMobile"
     remote
     :columns="columns"
     :data="rows"
@@ -107,6 +111,54 @@ const columns = computed<DataTableColumns<PostBrowseRow>>(() => [
     }"
     @update:sorter="onSorterChange"
   />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="r in rows" :key="r.id">
+      <template #title>{{ r.title }}</template>
+      <template #body>
+        <div class="muted slug">{{ r.slug }}</div>
+        <div class="m-line">
+          <NTag :type="r.status === 'published' ? 'success' : 'default'" size="small">
+            {{ dict.label('post.status', r.status) }}
+          </NTag>
+          <span class="muted">👁 {{ r.views }}</span>
+          <span class="muted">{{ dayjs(r.created_at).format('YYYY-MM-DD') }}</span>
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="openDetail(r)">{{ t('common.viewDetails') }}</NButton>
+      </template>
+    </MobileRowCard>
+    <div class="mobile-pager">
+      <NButton size="small" :disabled="page <= 1" @click="page = page - 1; load()">‹</NButton>
+      <span class="page-info">{{ page }} / {{ Math.max(1, Math.ceil(total / perPage)) }}</span>
+      <NButton size="small" :disabled="page * perPage >= total" @click="page = page + 1; load()">›</NButton>
+    </div>
+  </div>
 
   <RowDetailDrawer v-model:show="drawer" :title="t('dataPosts.drawerTitle')" :data="detail" />
 </template>
+
+<style scoped>
+.page-title { margin-top: 0; }
+.filter-row { margin-bottom: 12px; }
+.filter-input { width: 240px; max-width: 100%; }
+.filter-select { width: 160px; max-width: 100%; }
+.slug {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  word-break: break-all;
+}
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+.mobile-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.page-info { font-size: 13px; }
+@media (max-width: 480px) {
+  .filter-input,
+  .filter-select { width: 100%; }
+}
+</style>

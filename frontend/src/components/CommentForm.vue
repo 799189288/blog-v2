@@ -104,6 +104,10 @@ async function onSubmit() {
 .actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 480px) {
+  .actions :deep(.n-button) { flex: 1 1 auto; }
 }
 /* Hidden honeypot. `display: none` is enough — many bots ignore CSS but
    the ones that do parse it skip non-visible inputs; the ones that don't

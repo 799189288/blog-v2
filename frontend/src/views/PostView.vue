@@ -114,7 +114,7 @@ async function reloadComments() {
             <span v-if="post.reading_time_min > 0" class="reading-time" :title="$t('post.readingTime')">
               ⏱ {{ $t('post.readingTimeFull', { min: post.reading_time_min, words: post.word_count }) }}
             </span>
-            <NSpace inline :size="6" style="margin-left: 12px;">
+            <NSpace inline :size="6" class="meta-tags">
               <RouterLink
                 v-for="t in post.tags"
                 :key="t.id"
@@ -274,7 +274,8 @@ async function reloadComments() {
   .post-toc { display: none; }
 }
 
-.meta { font-size: 13px; opacity: 0.7; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.meta { font-size: 13px; opacity: 0.7; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.meta-tags { margin-left: 12px; }
 .draft-banner {
   background: rgba(240, 160, 32, 0.12);
   border: 1px solid rgba(240, 160, 32, 0.5);
@@ -337,5 +338,30 @@ async function reloadComments() {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+@media (max-width: 768px) {
+  h1 { font-size: 24px; line-height: 1.3; }
+  .meta { gap: 8px 10px; font-size: 12px; }
+  .meta-tags { margin-left: 0; }
+  .post-md-preview :deep(pre) { overflow-x: auto; max-width: 100%; }
+  .post-md-preview :deep(.katex-display) {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+  }
+  .post-md-preview :deep(table) { display: block; overflow-x: auto; }
+  .post-md-preview :deep(img) { max-width: 100%; height: auto; }
+  .post-md-preview :deep(.md-editor-preview) {
+    padding: 12px !important;
+    font-size: 15px;
+  }
+  .related-list :deep(li) { flex-wrap: wrap; gap: 6px 14px; }
+}
+@media (max-width: 480px) {
+  h1 { font-size: 20px; }
+  .nav-link { padding: 10px 12px; }
+  .nav-label { font-size: 11px; }
+  .nav-title { font-size: 14px; }
 }
 </style>

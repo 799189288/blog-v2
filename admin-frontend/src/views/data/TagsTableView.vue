@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
-import { NDataTable, NInput, NSpace, NButton } from 'naive-ui'
+import { NDataTable, NInput, NSpace, NButton, NTag } from 'naive-ui'
 import type { DataTableColumns, DataTableSortState } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import * as dataApi from '../../api/data'
 import type { TagBrowseRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
+import MobileRowCard from '../../components/MobileRowCard.vue'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const { t } = useI18n()
+const { isMobile } = useBreakpoint()
 const rows = ref<TagBrowseRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -51,12 +54,13 @@ const columns = computed<DataTableColumns<TagBrowseRow>>(() => [
 </script>
 
 <template>
-  <h2 style="margin-top: 0">{{ t('dataTags.title') }}</h2>
-  <NSpace style="margin-bottom: 12px;" :size="12" align="center">
-    <NInput v-model:value="q" :placeholder="t('dataTags.searchPlaceholder')" clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
+  <h2 class="page-title">{{ t('dataTags.title') }}</h2>
+  <NSpace class="filter-row" :size="12" align="center" :wrap="true">
+    <NInput v-model:value="q" :placeholder="t('dataTags.searchPlaceholder')" clearable class="filter-input" @update:value="() => { page = 1; load() }" />
     <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
   <NDataTable
+    v-if="!isMobile"
     remote
     :columns="columns"
     :data="rows"
@@ -70,5 +74,46 @@ const columns = computed<DataTableColumns<TagBrowseRow>>(() => [
     }"
     @update:sorter="onSorterChange"
   />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="r in rows" :key="r.id">
+      <template #title>{{ r.name }}</template>
+      <template #body>
+        <div class="m-line">
+          <span class="muted slug">{{ r.slug }}</span>
+          <NTag size="small" :type="r.post_count > 0 ? 'info' : 'default'">
+            {{ r.post_count }}
+          </NTag>
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="openDetail(r)">{{ t('common.viewDetails') }}</NButton>
+      </template>
+    </MobileRowCard>
+    <div class="mobile-pager">
+      <NButton size="small" :disabled="page <= 1" @click="page = page - 1; load()">‹</NButton>
+      <span class="page-info">{{ page }} / {{ Math.max(1, Math.ceil(total / perPage)) }}</span>
+      <NButton size="small" :disabled="page * perPage >= total" @click="page = page + 1; load()">›</NButton>
+    </div>
+  </div>
   <RowDetailDrawer v-model:show="drawer" :title="t('dataTags.drawerTitle')" :data="detail" />
 </template>
+
+<style scoped>
+.page-title { margin-top: 0; }
+.filter-row { margin-bottom: 12px; }
+.filter-input { width: 240px; max-width: 100%; }
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+.slug { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; word-break: break-all; }
+.mobile-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.page-info { font-size: 13px; }
+@media (max-width: 480px) {
+  .filter-input { width: 100%; }
+}
+</style>

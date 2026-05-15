@@ -7,10 +7,13 @@ import dayjs from 'dayjs'
 import * as dataApi from '../../api/data'
 import type { CommentBrowseRow } from '../../types'
 import RowDetailDrawer from '../../components/RowDetailDrawer.vue'
+import MobileRowCard from '../../components/MobileRowCard.vue'
 import { useDictStore } from '../../stores/dict'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 const rows = ref<CommentBrowseRow[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -86,15 +89,16 @@ const columns = computed<DataTableColumns<CommentBrowseRow>>(() => [
 </script>
 
 <template>
-  <h2 style="margin-top: 0">{{ t('dataComments.title') }}</h2>
-  <NSpace style="margin-bottom: 12px;" :size="12" align="center">
-    <NInput v-model:value="q" :placeholder="t('dataComments.searchPlaceholder')" clearable style="width: 240px;" @update:value="() => { page = 1; load() }" />
-    <NSelect v-model:value="status" :options="statusOptions" :placeholder="t('dataComments.statusPlaceholder')" style="width: 160px;" clearable @update:value="() => { page = 1; load() }" />
-    <NInputNumber v-model:value="postId" :placeholder="t('dataComments.postIdPlaceholder')" clearable :show-button="false" style="width: 120px;" @update:value="() => { page = 1; load() }" />
+  <h2 class="page-title">{{ t('dataComments.title') }}</h2>
+  <NSpace class="filter-row" :size="12" align="center" :wrap="true">
+    <NInput v-model:value="q" :placeholder="t('dataComments.searchPlaceholder')" clearable class="filter-input" @update:value="() => { page = 1; load() }" />
+    <NSelect v-model:value="status" :options="statusOptions" :placeholder="t('dataComments.statusPlaceholder')" class="filter-select" clearable @update:value="() => { page = 1; load() }" />
+    <NInputNumber v-model:value="postId" :placeholder="t('dataComments.postIdPlaceholder')" clearable :show-button="false" class="filter-num" @update:value="() => { page = 1; load() }" />
     <NButton @click="load">{{ t('common.refresh') }}</NButton>
   </NSpace>
 
   <NDataTable
+    v-if="!isMobile"
     remote
     :columns="columns"
     :data="rows"
@@ -108,6 +112,67 @@ const columns = computed<DataTableColumns<CommentBrowseRow>>(() => [
     }"
     @update:sorter="onSorterChange"
   />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="r in rows" :key="r.id">
+      <template #title>
+        {{ r.author_name }}
+        <span class="m-when">{{ dayjs(r.created_at).format('YYYY-MM-DD HH:mm') }}</span>
+      </template>
+      <template #body>
+        <div class="m-content">{{ r.content }}</div>
+        <div class="m-line">
+          <NTag
+            :type="r.status === 'approved' ? 'success' : r.status === 'spam' ? 'error' : 'warning'"
+            size="small"
+          >
+            {{ dict.label('comment.status', r.status) }}
+          </NTag>
+          <span class="muted">post #{{ r.post_id }}</span>
+          <span v-if="r.parent_id" class="muted">@{{ r.parent_author_name ?? `#${r.parent_id}` }}</span>
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="openDetail(r)">{{ t('common.viewDetails') }}</NButton>
+      </template>
+    </MobileRowCard>
+    <div class="mobile-pager">
+      <NButton size="small" :disabled="page <= 1" @click="page = page - 1; load()">‹</NButton>
+      <span class="page-info">{{ page }} / {{ Math.max(1, Math.ceil(total / perPage)) }}</span>
+      <NButton size="small" :disabled="page * perPage >= total" @click="page = page + 1; load()">›</NButton>
+    </div>
+  </div>
 
   <RowDetailDrawer v-model:show="drawer" :title="t('dataComments.drawerTitle')" :data="detail" />
 </template>
+
+<style scoped>
+.page-title { margin-top: 0; }
+.filter-row { margin-bottom: 12px; }
+.filter-input { width: 240px; max-width: 100%; }
+.filter-select { width: 160px; max-width: 100%; }
+.filter-num { width: 120px; max-width: 100%; }
+.m-when { font-size: 12px; opacity: 0.65; font-weight: 400; margin-left: 6px; }
+.m-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+.mobile-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.page-info { font-size: 13px; }
+@media (max-width: 480px) {
+  .filter-input,
+  .filter-select,
+  .filter-num { width: 100%; }
+}
+</style>

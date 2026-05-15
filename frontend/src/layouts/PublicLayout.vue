@@ -5,11 +5,13 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { setLocale, type Locale } from '../i18n'
 import { useTheme, type ThemeMode } from '../composables/useTheme'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const router = useRouter()
 const query = ref('')
 const { t, locale } = useI18n()
 const { mode: themeMode, cycle: cycleTheme } = useTheme()
+const { isNarrow } = useBreakpoint()
 
 function onSearch() {
   const q = query.value.trim()
@@ -49,13 +51,21 @@ const themeTitle = computed(() => {
         </div>
         <div class="header-right">
           <NInput
+            v-if="!isNarrow"
             v-model:value="query"
             :placeholder="t('layout.searchPlaceholder')"
             clearable
             size="small"
-            style="width: 220px"
+            class="header-search"
             @keyup.enter="onSearch"
           />
+          <RouterLink
+            v-else
+            :to="{ name: 'search' }"
+            class="search-link"
+            :title="t('layout.searchPlaceholder')"
+            :aria-label="t('layout.searchPlaceholder')"
+          >🔍</RouterLink>
           <button
             type="button"
             class="theme-btn"
@@ -104,12 +114,32 @@ const themeTitle = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 .header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
+.header-search {
+  width: 220px;
+  max-width: 50vw;
+}
+.search-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 4px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 14px;
+}
+.search-link:hover { border-color: rgba(127, 127, 127, 0.6); }
 .brand {
   font-weight: 600;
   font-size: 18px;
@@ -153,5 +183,19 @@ const themeTitle = computed(() => {
 .content-wrap {
   max-width: 960px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .header-inner { gap: 10px; }
+  .header-left { gap: 12px; }
+  .brand { font-size: 16px; }
+  .main-content { padding: 20px 16px !important; }
+  :deep(.n-layout-header) { padding: 10px 14px !important; }
+  :deep(.n-layout-footer) { padding: 12px 14px !important; }
+}
+@media (max-width: 480px) {
+  .header-right { gap: 8px; }
+  .nav-link { font-size: 13px; }
+  .main-content { padding: 16px 12px !important; }
 }
 </style>

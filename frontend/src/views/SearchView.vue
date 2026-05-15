@@ -56,14 +56,14 @@ watch(() => route.query.q, val => {
 <template>
   <BackButton />
   <h2>{{ $t('search.title') }}</h2>
-  <div style="display: flex; gap: 8px; max-width: 480px; margin-bottom: 16px;">
+  <div class="search-row">
     <NInput v-model:value="q" :placeholder="$t('search.keywordsPlaceholder')" @keyup.enter="onSubmit" />
     <NButton type="primary" @click="onSubmit">{{ $t('common.search') }}</NButton>
   </div>
   <NSpin :show="loading">
     <NEmpty v-if="!loading && hasQuery && posts.length === 0" :description="$t('search.noResults')" />
     <PostCard v-for="p in posts" :key="p.id" :post="p" />
-    <div v-if="total > perPage" style="display: flex; justify-content: center; margin-top: 24px;">
+    <div v-if="total > perPage" class="pager">
       <NPagination
         v-model:page="page"
         :item-count="total"
@@ -73,3 +73,22 @@ watch(() => route.query.q, val => {
     </div>
   </NSpin>
 </template>
+
+<style scoped>
+.search-row {
+  display: flex;
+  gap: 8px;
+  max-width: 480px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-row :deep(.n-input) { flex: 1 1 200px; min-width: 0; }
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+@media (max-width: 480px) {
+  .search-row :deep(.n-button) { flex: 1 1 auto; }
+}
+</style>

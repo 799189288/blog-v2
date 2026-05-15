@@ -11,12 +11,15 @@ import * as usersApi from '../api/users'
 import type { UserRow } from '../types'
 import { useAuthStore } from '../stores/auth'
 import { useDictStore } from '../stores/dict'
+import { useBreakpoint } from '../composables/useBreakpoint'
+import MobileRowCard from '../components/MobileRowCard.vue'
 
 const auth = useAuthStore()
 const dialog = useDialog()
 const message = useMessage()
 const { t } = useI18n()
 const dict = useDictStore()
+const { isMobile } = useBreakpoint()
 
 const rows = ref<UserRow[]>([])
 const loading = ref(false)
@@ -127,14 +130,53 @@ const columns = computed<DataTableColumns<UserRow>>(() => [
 </script>
 
 <template>
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h2 style="margin: 0">{{ t('users.title') }}</h2>
+  <div class="page-header">
+    <h2 class="page-title">{{ t('users.title') }}</h2>
     <NButton type="primary" @click="createOpen = true">{{ t('users.newUser') }}</NButton>
   </div>
 
-  <NDataTable :columns="columns" :data="rows" :loading="loading" :row-key="(r: UserRow) => r.id" />
+  <NDataTable
+    v-if="!isMobile"
+    :columns="columns"
+    :data="rows"
+    :loading="loading"
+    :row-key="(r: UserRow) => r.id"
+  />
+  <div v-else class="m-list">
+    <MobileRowCard v-for="r in rows" :key="r.id">
+      <template #title>
+        {{ r.username }}
+        <NTag v-if="auth.user?.id === r.id" size="small" type="info" class="me-tag">
+          {{ t('common.you') }}
+        </NTag>
+      </template>
+      <template #body>
+        <div class="m-line">
+          <NTag size="small" type="info">{{ dict.label('user.role', r.role) }}</NTag>
+          <span class="muted">{{ dayjs(r.created_at).format('YYYY-MM-DD HH:mm') }}</span>
+        </div>
+      </template>
+      <template #actions>
+        <NButton size="small" @click="openReset(r)">{{ t('users.resetPassword') }}</NButton>
+        <NButton
+          size="small"
+          type="error"
+          ghost
+          :disabled="auth.user?.id === r.id"
+          @click="confirmDelete(r)"
+        >
+          {{ t('common.delete') }}
+        </NButton>
+      </template>
+    </MobileRowCard>
+  </div>
 
-  <NModal v-model:show="createOpen" preset="card" :title="t('users.createTitle')" style="width: 420px;">
+  <NModal
+    v-model:show="createOpen"
+    preset="card"
+    :title="t('users.createTitle')"
+    :style="{ width: isMobile ? '94vw' : '420px', maxWidth: '94vw' }"
+  >
     <NForm label-placement="top">
       <NFormItem :label="t('users.usernameLabel')">
         <NInput v-model:value="createForm.username" />
@@ -149,7 +191,12 @@ const columns = computed<DataTableColumns<UserRow>>(() => [
     </NForm>
   </NModal>
 
-  <NModal v-model:show="resetOpen" preset="card" :title="t('users.resetTitle', { name: resetTarget?.username ?? '' })" style="width: 420px;">
+  <NModal
+    v-model:show="resetOpen"
+    preset="card"
+    :title="t('users.resetTitle', { name: resetTarget?.username ?? '' })"
+    :style="{ width: isMobile ? '94vw' : '420px', maxWidth: '94vw' }"
+  >
     <NForm label-placement="top">
       <NFormItem :label="t('users.newPasswordLabel')">
         <NInput v-model:value="resetPwd" type="password" show-password-on="click" />
@@ -161,3 +208,18 @@ const columns = computed<DataTableColumns<UserRow>>(() => [
     </NForm>
   </NModal>
 </template>
+
+<style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.page-title { margin: 0; }
+.me-tag { margin-left: 8px; }
+.m-line { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.muted { opacity: 0.7; font-size: 12px; }
+</style>
