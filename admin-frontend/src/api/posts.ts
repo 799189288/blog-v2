@@ -27,8 +27,11 @@ export async function adminDelete(id: number) {
 
 export interface UploadResponse {
   url: string
+  thumb_url: string | null
   filename: string
   size: number
+  width: number | null
+  height: number | null
 }
 
 /// Uploads one image at a time via multipart and returns the public URL
