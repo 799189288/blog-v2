@@ -15,6 +15,7 @@ import CommentForm from '../components/CommentForm.vue'
 import BackButton from '../components/BackButton.vue'
 import { useHead } from '../composables/useHead'
 import { useTheme } from '../composables/useTheme'
+import { rewriteUploads } from '../utils/uploadUrl'
 import type { PostDetail, Comment, PostNav } from '../types'
 
 config({
@@ -50,6 +51,11 @@ const previewToken = computed(() => {
 })
 
 const isDraftPreview = computed(() => post.value?.status === 'draft')
+
+// Rewrite `/uploads/...` link targets to absolute backend URLs when the
+// public site and backend run on different origins (split-domain
+// deploys). On same-origin setups this is a no-op.
+const renderedMd = computed(() => rewriteUploads(post.value?.content_md ?? ''))
 
 async function load() {
   loading.value = true
@@ -127,7 +133,7 @@ async function reloadComments() {
           </div>
           <MdPreview
             :editor-id="previewId"
-            :model-value="post.content_md"
+            :model-value="renderedMd"
             :language="editorLang"
             :theme="editorTheme"
             preview-theme="default"
