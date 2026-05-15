@@ -80,7 +80,7 @@ function chartOption(title: string, points: { date: string; count: number }[] | 
   }
 }
 
-const postsOption = computed(() => chartOption(t('dashboard.chartPostsPublished'), trend.value?.posts, '#18a058'))
+const postsOption = computed(() => chartOption(t('dashboard.chartPostsPublished'), trend.value?.posts, '#c0392b'))
 const commentsOption = computed(() => chartOption(t('dashboard.chartComments'), trend.value?.comments, '#2080f0'))
 
 // Tag-cloud font size: scale by post_count between min..max.
@@ -213,8 +213,8 @@ function commentStatusType(s: string): 'default' | 'success' | 'warning' | 'erro
                 <span class="top-title" :title="p.title">{{ p.title }}</span>
               </RouterLink>
               <span class="top-meta">
-                <span class="meta-chip"><span class="eye">👁</span> {{ p.views }}</span>
-                <span class="meta-chip">💬 {{ p.comment_count }}</span>
+                <span class="meta-chip">{{ t('dashboard.viewsCount', { n: p.views }) }}</span>
+                <span class="meta-chip">{{ t('dashboard.commentsCount', { n: p.comment_count }) }}</span>
               </span>
             </li>
           </ol>

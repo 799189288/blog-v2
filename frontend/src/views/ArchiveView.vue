@@ -5,7 +5,6 @@ import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import * as postsApi from '../api/posts'
-import BackButton from '../components/BackButton.vue'
 import { useHead } from '../composables/useHead'
 import type { ArchiveGroup } from '../types'
 
@@ -39,7 +38,6 @@ function formatHeader(g: ArchiveGroup): string {
 </script>
 
 <template>
-  <BackButton />
   <h2 class="page-title">
     {{ t('archive.title') }}
     <span v-if="!loading" class="count">{{ t('archive.totalCount', { count: totalCount }) }}</span>

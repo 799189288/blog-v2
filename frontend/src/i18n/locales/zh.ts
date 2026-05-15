@@ -1,12 +1,12 @@
 export default {
   common: {
-    back: '返回',
     submit: '提交',
     search: '搜索',
     cancel: '取消',
   },
   layout: {
-    brand: '首页',
+    brand: 'Leo 的笔记',
+    home: '首页',
     searchPlaceholder: '搜索文章...',
     archive: '归档',
   },
@@ -14,12 +14,15 @@ export default {
     emptyPosts: '暂无文章',
     tags: '标签',
     metaDescription: '最新文章与笔记。',
+    aboutAria: '作者简介',
+    socialsAria: '社交链接',
   },
   post: {
     notFound: '文章不存在。',
     comments: '评论（{count}）',
     leaveComment: '发表评论',
     views: '浏览量',
+    viewsCount: '{n} 次浏览',
     readingTime: '阅读时长',
     readingTimeShort: '约 {min} 分钟',
     readingTimeFull: '约 {min} 分钟 · {words} 字',
@@ -32,8 +35,12 @@ export default {
   },
   search: {
     title: '搜索',
+    subtitle: '按关键词查找文章，覆盖标题、摘要和正文。',
     keywordsPlaceholder: '关键词...',
     noResults: '没有匹配结果',
+    noResultsHint: '没有找到与"{q}"相关的文章，换个关键词试试。',
+    emptyHint: '输入关键词并回车开始搜索。',
+    resultsCount: '"{q}" 的结果，共 {n} 条',
   },
   tag: {
     title: '标签：{slug}',
@@ -70,6 +77,9 @@ export default {
     auto: '跟随系统',
     light: '浅色模式',
     dark: '深色模式',
+    autoShort: '自动',
+    lightShort: '浅色',
+    darkShort: '深色',
     clickToCycle: '点击切换',
   },
 }

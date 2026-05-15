@@ -120,7 +120,7 @@ const columns = computed<DataTableColumns<PostBrowseRow>>(() => [
           <NTag :type="r.status === 'published' ? 'success' : 'default'" size="small">
             {{ dict.label('post.status', r.status) }}
           </NTag>
-          <span class="muted">👁 {{ r.views }}</span>
+          <span class="muted">{{ t('dashboard.viewsCount', { n: r.views }) }}</span>
           <span class="muted">{{ dayjs(r.created_at).format('YYYY-MM-DD') }}</span>
         </div>
       </template>

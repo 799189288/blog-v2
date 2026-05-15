@@ -1,12 +1,12 @@
 export default {
   common: {
-    back: 'Back',
     submit: 'Submit',
     search: 'Search',
     cancel: 'Cancel',
   },
   layout: {
-    brand: 'Home',
+    brand: "Leo's Notes",
+    home: 'Home',
     searchPlaceholder: 'Search posts...',
     archive: 'Archive',
   },
@@ -14,12 +14,15 @@ export default {
     emptyPosts: 'No posts yet',
     tags: 'Tags',
     metaDescription: 'Latest posts and notes.',
+    aboutAria: 'About the author',
+    socialsAria: 'Social links',
   },
   post: {
     notFound: 'Post not found.',
     comments: 'Comments ({count})',
     leaveComment: 'Leave a comment',
     views: 'Views',
+    viewsCount: '{n} views',
     readingTime: 'Reading time',
     readingTimeShort: '{min} min read',
     readingTimeFull: '{min} min read · {words} words',
@@ -32,8 +35,12 @@ export default {
   },
   search: {
     title: 'Search',
+    subtitle: 'Find posts by keyword. Searches title, excerpt and body.',
     keywordsPlaceholder: 'Keywords...',
     noResults: 'No results',
+    noResultsHint: 'No posts matched “{q}”. Try a different keyword.',
+    emptyHint: 'Type a keyword and press Enter to search.',
+    resultsCount: '{n} results for “{q}”',
   },
   tag: {
     title: 'Tag: {slug}',
@@ -70,6 +77,9 @@ export default {
     auto: 'Follow system',
     light: 'Light mode',
     dark: 'Dark mode',
+    autoShort: 'Auto',
+    lightShort: 'Light',
+    darkShort: 'Dark',
     clickToCycle: 'click to switch',
   },
 }

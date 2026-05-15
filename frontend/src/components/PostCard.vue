@@ -17,10 +17,10 @@ defineProps<{ post: PostSummary }>()
         {{ dayjs(post.published_at).format('YYYY-MM-DD') }}
       </span>
       <span class="views" :title="$t('post.views')">
-        <span class="eye">👁</span> {{ post.views }}
+        {{ $t('post.viewsCount', { n: post.views }) }}
       </span>
       <span v-if="post.reading_time_min > 0" class="reading-time" :title="$t('post.readingTime')">
-        ⏱ {{ $t('post.readingTimeShort', { min: post.reading_time_min }) }}
+        {{ $t('post.readingTimeShort', { min: post.reading_time_min }) }}
       </span>
       <NSpace :size="6" inline class="meta-tags">
         <RouterLink
@@ -39,21 +39,41 @@ defineProps<{ post: PostSummary }>()
 
 <style scoped>
 .post-card {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--n-border-color, #eee);
+  position: relative;
+  padding: 18px 18px 18px 22px;
+  margin-bottom: 12px;
+  border: 1px solid var(--n-border-color, rgba(127, 127, 127, 0.18));
+  border-radius: 8px;
+  background: var(--n-card-color, transparent);
+  transition: border-color 0.2s;
 }
+/* Left accent bar that grows on hover. Using a pseudo-element keeps
+   the layout stable (no width change on the card itself). */
+.post-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--brand-color, #c0392b);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.2s;
+}
+.post-card:hover::before { width: 5px; }
+.post-card:hover { border-color: rgba(192, 57, 43, 0.4); }
 .title { margin: 0 0 4px; font-size: 22px; }
 .title a { text-decoration: none; }
 .title a:hover { text-decoration: underline; }
 .meta { font-size: 13px; opacity: 0.7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .meta-tags { margin-left: 12px; }
 .views { display: inline-flex; align-items: center; gap: 4px; }
-.views .eye { font-size: 14px; }
 .reading-time { display: inline-flex; align-items: center; gap: 4px; }
 .excerpt { margin: 8px 0 0; }
 .tag-link { text-decoration: none; cursor: pointer; }
 .tag-link :deep(.n-tag) { cursor: pointer; }
 @media (max-width: 768px) {
+  .post-card { padding: 14px 14px 14px 18px; }
   .title { font-size: 18px; }
   .meta { gap: 8px 10px; font-size: 12px; }
   .meta-tags { margin-left: 0; }

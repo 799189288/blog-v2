@@ -12,7 +12,6 @@ import * as postsApi from '../api/posts'
 import * as commentsApi from '../api/comments'
 import CommentList from '../components/CommentList.vue'
 import CommentForm from '../components/CommentForm.vue'
-import BackButton from '../components/BackButton.vue'
 import { useHead } from '../composables/useHead'
 import { useTheme } from '../composables/useTheme'
 import { rewriteUploads } from '../utils/uploadUrl'
@@ -102,7 +101,6 @@ async function reloadComments() {
 </script>
 
 <template>
-  <BackButton />
   <div class="post-layout">
     <div class="post-main">
       <NSpin :show="loading">
@@ -115,10 +113,10 @@ async function reloadComments() {
           <div class="meta">
             <span v-if="post.published_at">{{ dayjs(post.published_at).format('YYYY-MM-DD') }}</span>
             <span class="views" :title="$t('post.views')">
-              <span class="eye">👁</span> {{ post.views }}
+              {{ $t('post.viewsCount', { n: post.views }) }}
             </span>
             <span v-if="post.reading_time_min > 0" class="reading-time" :title="$t('post.readingTime')">
-              ⏱ {{ $t('post.readingTimeFull', { min: post.reading_time_min, words: post.word_count }) }}
+              {{ $t('post.readingTimeFull', { min: post.reading_time_min, words: post.word_count }) }}
             </span>
             <NSpace inline :size="6" class="meta-tags">
               <RouterLink
@@ -265,11 +263,17 @@ async function reloadComments() {
   transition: opacity 0.15s, border-color 0.15s, color 0.15s;
 }
 .post-toc :deep(.md-editor-catalog-link:hover) { opacity: 1; }
-.post-toc :deep(.md-editor-catalog-link.md-editor-catalog-active) {
+/* md-editor-v3 puts the actual heading text in a child <span> and styles
+   the active color on `.md-editor-catalog-active>span` (a stock green
+   #73d13d in their vendor preview.css). Our brand color must override
+   the span too, not just the link. */
+.post-toc :deep(.md-editor-catalog-link.md-editor-catalog-active),
+.post-toc :deep(.md-editor-catalog-link.md-editor-catalog-active > span),
+.post-toc :deep(.md-editor-catalog-link:hover > span) {
   opacity: 1;
   font-weight: 600;
-  color: #18a058;
-  border-left-color: #18a058;
+  color: var(--brand-color, #c0392b);
+  border-left-color: var(--brand-color, #c0392b);
 }
 
 @media (max-width: 1399px) {
@@ -282,6 +286,11 @@ async function reloadComments() {
 
 .meta { font-size: 13px; opacity: 0.7; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .meta-tags { margin-left: 12px; }
+.post-main h1 {
+  font-size: 36px;
+  line-height: 1.2;
+  margin: 0 0 14px;
+}
 .draft-banner {
   background: rgba(240, 160, 32, 0.12);
   border: 1px solid rgba(240, 160, 32, 0.5);
@@ -292,7 +301,6 @@ async function reloadComments() {
   margin-bottom: 18px;
 }
 .views { display: inline-flex; align-items: center; gap: 4px; }
-.views .eye { font-size: 14px; }
 .reading-time { display: inline-flex; align-items: center; gap: 4px; }
 .tag-link { text-decoration: none; cursor: pointer; }
 .tag-link :deep(.n-tag) { cursor: pointer; }
@@ -302,6 +310,43 @@ async function reloadComments() {
 }
 .post-md-preview :deep(.md-editor-preview-wrapper) {
   padding: 0;
+}
+/* Match the global serif heading rule inside scoped MD preview, where
+   md-editor-v3 renders article headings outside Vue's scope. */
+.post-md-preview :deep(h1),
+.post-md-preview :deep(h2),
+.post-md-preview :deep(h3),
+.post-md-preview :deep(h4) {
+  font-family: 'EB Garamond', 'Noto Serif SC', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.post-md-preview :deep(blockquote) {
+  border-left: 3px solid var(--brand-color, #c0392b);
+  margin: 16px 0;
+  padding: 6px 16px;
+  background: var(--brand-color-soft, rgba(192, 57, 43, 0.06));
+  font-style: italic;
+  color: inherit;
+  border-radius: 0 4px 4px 0;
+}
+.post-md-preview :deep(pre) {
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid rgba(127, 127, 127, 0.15);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.post-md-preview :deep(pre code) {
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
+}
+.post-md-preview :deep(:not(pre) > code) {
+  background: rgba(127, 127, 127, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.92em;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
 }
 .prev-next {
   display: grid;
@@ -347,7 +392,7 @@ async function reloadComments() {
 }
 
 @media (max-width: 768px) {
-  h1 { font-size: 24px; line-height: 1.3; }
+  .post-main h1 { font-size: 26px; line-height: 1.3; }
   .meta { gap: 8px 10px; font-size: 12px; }
   .meta-tags { margin-left: 0; }
   .post-md-preview :deep(pre) { overflow-x: auto; max-width: 100%; }
@@ -365,7 +410,7 @@ async function reloadComments() {
   .related-list :deep(li) { flex-wrap: wrap; gap: 6px 14px; }
 }
 @media (max-width: 480px) {
-  h1 { font-size: 20px; }
+  .post-main h1 { font-size: 22px; }
   .nav-link { padding: 10px 12px; }
   .nav-label { font-size: 11px; }
   .nav-title { font-size: 14px; }

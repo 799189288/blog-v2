@@ -115,7 +115,7 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
           <span v-if="p.published_at" class="muted">
             {{ dayjs(p.published_at).format('YYYY-MM-DD') }}
           </span>
-          <span class="muted">👁 {{ p.views }}</span>
+          <span class="muted">{{ t('dashboard.viewsCount', { n: p.views }) }}</span>
         </div>
         <div v-if="p.tags.length" class="m-line muted">
           {{ p.tags.map(tg => tg.name).join(', ') }}

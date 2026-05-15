@@ -71,6 +71,8 @@ export default {
     commentsBreakdown: '{approved} approved · {pending} pending · {spam} spam',
     pendingComments: 'Pending comments',
     needModeration: 'need moderation',
+    viewsCount: '{n} views',
+    commentsCount: '{n} comments',
     tags: 'Tags',
     adminUsers: 'Admin users',
     trend: 'Trend',
@@ -335,6 +337,9 @@ export default {
     auto: 'Follow system',
     light: 'Light mode',
     dark: 'Dark mode',
+    autoShort: 'Auto',
+    lightShort: 'Light',
+    darkShort: 'Dark',
     clickToCycle: 'click to switch',
   },
 }

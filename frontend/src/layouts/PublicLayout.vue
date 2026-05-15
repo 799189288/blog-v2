@@ -29,11 +29,11 @@ function onLangSelect(key: string) {
   setLocale(key as Locale)
 }
 
-// One glyph per state — auto follows the OS so we show a system-ish
-// icon, sun for forced light, moon for forced dark.
-const themeIcon = computed(() => {
+// Short label per state. The `title` attr still gets the long
+// description plus the "click to switch" hint.
+const themeLabel = computed(() => {
   const m: ThemeMode = themeMode.value
-  return m === 'auto' ? '🖥' : m === 'light' ? '☀' : '☾'
+  return t(`theme.${m}Short`)
 })
 const themeTitle = computed(() => {
   const m: ThemeMode = themeMode.value
@@ -47,7 +47,10 @@ const themeTitle = computed(() => {
       <div class="header-inner">
         <div class="header-left">
           <RouterLink :to="{ name: 'home' }" class="brand">{{ t('layout.brand') }}</RouterLink>
-          <RouterLink :to="{ name: 'archive' }" class="nav-link">{{ t('layout.archive') }}</RouterLink>
+          <nav class="nav">
+            <RouterLink :to="{ name: 'home' }" class="nav-link" :exact-active-class="'is-active'" active-class="">{{ t('layout.home') }}</RouterLink>
+            <RouterLink :to="{ name: 'archive' }" class="nav-link" active-class="is-active">{{ t('layout.archive') }}</RouterLink>
+          </nav>
         </div>
         <div class="header-right">
           <NInput
@@ -65,7 +68,7 @@ const themeTitle = computed(() => {
             class="search-link"
             :title="t('layout.searchPlaceholder')"
             :aria-label="t('layout.searchPlaceholder')"
-          >🔍</RouterLink>
+          >{{ t('common.search') }}</RouterLink>
           <button
             type="button"
             class="theme-btn"
@@ -73,7 +76,7 @@ const themeTitle = computed(() => {
             :aria-label="themeTitle"
             @click="cycleTheme"
           >
-            {{ themeIcon }}
+            {{ themeLabel }}
           </button>
           <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
             <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
@@ -131,33 +134,43 @@ const themeTitle = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 30px;
+  padding: 4px 10px;
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 4px;
   text-decoration: none;
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
 }
 .search-link:hover { border-color: rgba(127, 127, 127, 0.6); }
 .brand {
+  font-family: 'EB Garamond', 'Noto Serif SC', Georgia, serif;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 20px;
   text-decoration: none;
+  letter-spacing: -0.005em;
 }
 .header-left {
   display: flex;
   align-items: baseline;
-  gap: 20px;
+  gap: 24px;
+}
+.nav {
+  display: flex;
+  gap: 16px;
 }
 .nav-link {
   text-decoration: none;
   font-size: 14px;
-  opacity: 0.75;
+  opacity: 0.65;
   color: inherit;
+  transition: opacity 0.15s, color 0.15s;
 }
 .nav-link:hover { opacity: 1; }
-.nav-link.router-link-active { opacity: 1; font-weight: 500; }
+.nav-link.is-active {
+  opacity: 1;
+  color: var(--brand-color, #c0392b);
+  font-weight: 500;
+}
 .lang-btn,
 .theme-btn {
   background: transparent;
@@ -171,14 +184,6 @@ const themeTitle = computed(() => {
 .lang-btn:hover,
 .theme-btn:hover {
   border-color: rgba(127, 127, 127, 0.6);
-}
-.theme-btn {
-  /* Keep glyphs centered regardless of which one renders. */
-  min-width: 34px;
-  text-align: center;
-  font-size: 16px;
-  line-height: 1;
-  padding: 4px 8px;
 }
 .content-wrap {
   max-width: 960px;

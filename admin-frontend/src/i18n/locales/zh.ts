@@ -71,6 +71,8 @@ export default {
     commentsBreakdown: '已通过 {approved} · 待审 {pending} · 垃圾 {spam}',
     pendingComments: '待审评论',
     needModeration: '待审核',
+    viewsCount: '{n} 次浏览',
+    commentsCount: '{n} 条评论',
     tags: '标签',
     adminUsers: '管理员',
     trend: '趋势',
@@ -335,6 +337,9 @@ export default {
     auto: '跟随系统',
     light: '浅色模式',
     dark: '深色模式',
+    autoShort: '自动',
+    lightShort: '浅色',
+    darkShort: '深色',
     clickToCycle: '点击切换',
   },
 }

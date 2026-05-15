@@ -6,6 +6,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Brand color tokens. The hex value is duplicated in App.vue's
+     NConfigProvider theme-overrides — keep them in sync. */
+  --brand-color: #c0392b;
+  --brand-color-hover: #d3543f;
+  --brand-color-soft: rgba(192, 57, 43, 0.08);
 }
 
 * { box-sizing: border-box; }
@@ -20,3 +26,12 @@ body {
 #app { min-height: 100vh; }
 
 a { color: inherit; }
+
+/* Serif headings. EB Garamond covers Latin; Noto Serif SC carries
+   Chinese glyphs (browser picks the right one per codepoint). Georgia
+   and Source Han Serif SC are system fallbacks if the CDN fails. */
+h1, h2, h3, h4 {
+  font-family: 'EB Garamond', 'Noto Serif SC', Georgia, 'Source Han Serif SC', serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}

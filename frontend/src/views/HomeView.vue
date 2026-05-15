@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
 import * as tagsApi from '../api/tags'
 import PostCard from '../components/PostCard.vue'
+import HomeHero from '../components/HomeHero.vue'
 import { RouterLink } from 'vue-router'
 import { useHead } from '../composables/useHead'
 import type { PostSummary, TagWithCount } from '../types'
@@ -37,6 +38,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <HomeHero />
   <div class="home">
     <div class="posts">
       <NSpin :show="loading">

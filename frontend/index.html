@@ -5,6 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/rss.xml" />
+    <!-- Serif heading fonts via jsDelivr-hosted fontsource. The first link
+         preconnects to avoid a separate handshake when the woff2 files
+         actually fetch. The simplified-Chinese subset of Noto Serif SC is
+         ~800 KB vs ~5 MB for the full set. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/eb-garamond@5.0.16/index.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.0.5/chinese-simplified.css" />
     <title>Blog</title>
   </head>
   <body>

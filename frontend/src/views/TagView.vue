@@ -6,7 +6,6 @@ import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
 import * as tagsApi from '../api/tags'
 import PostCard from '../components/PostCard.vue'
-import BackButton from '../components/BackButton.vue'
 import { useHead } from '../composables/useHead'
 import type { PostSummary } from '../types'
 
@@ -47,7 +46,6 @@ watch(() => route.params.slug, load)
 </script>
 
 <template>
-  <BackButton />
   <h2>{{ $t('tag.title', { slug: tagName }) }}</h2>
   <NSpin :show="loading">
     <NEmpty v-if="!loading && tagMissing" :description="$t('tag.notFound')" />

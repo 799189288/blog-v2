@@ -41,9 +41,9 @@ function onLangSelect(key: string) {
   setLocale(key as Locale)
 }
 
-const themeIcon = computed(() => {
+const themeLabel = computed(() => {
   const m: ThemeMode = themeMode.value
-  return m === 'auto' ? '🖥' : m === 'light' ? '☀' : '☾'
+  return t(`theme.${m}Short`)
 })
 const themeTitle = computed(() => {
   const m: ThemeMode = themeMode.value
@@ -72,7 +72,7 @@ const themeTitle = computed(() => {
             class="hamburger"
             :aria-label="t('mobile.menu')"
             @click="drawerOpen = true"
-          >☰</NButton>
+          >{{ t('mobile.menu') }}</NButton>
         </div>
         <NSpace class="header-right" align="center" :wrap="true">
           <button
@@ -81,7 +81,7 @@ const themeTitle = computed(() => {
             :title="themeTitle"
             :aria-label="themeTitle"
             @click="cycleTheme"
-          >{{ themeIcon }}</button>
+          >{{ themeLabel }}</button>
           <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
             <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
           </NDropdown>
@@ -120,9 +120,8 @@ const themeTitle = computed(() => {
 .header-left { display: flex; align-items: center; }
 .header-right { flex: 0 1 auto; justify-content: flex-end; }
 .hamburger {
-  font-size: 20px;
   line-height: 1;
-  padding: 0 10px;
+  padding: 0 12px;
   height: 32px;
 }
 .lang-btn,
@@ -137,13 +136,6 @@ const themeTitle = computed(() => {
 }
 .lang-btn:hover,
 .theme-btn:hover { border-color: rgba(127, 127, 127, 0.6); }
-.theme-btn {
-  min-width: 34px;
-  text-align: center;
-  font-size: 16px;
-  line-height: 1;
-  padding: 4px 8px;
-}
 .user-tag { font-size: 13px; opacity: 0.75; }
 .admin-content { padding: 24px; }
 @media (max-width: 768px) {
