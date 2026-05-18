@@ -33,16 +33,23 @@ pub async fn search(
         }));
     }
 
+    // Wrap the query in % for ILIKE substring matching.
+    // pg_trgm GIN indexes make this fast for strings >= 3 chars.
+    let pattern = format!("%{}%", query);
+
     let rows = sqlx::query_as::<_, Post>(
         r#"
-        SELECT p.*
-        FROM posts p, websearch_to_tsquery('simple', $1) AS q
-        WHERE p.status = 'published' AND p.search_vector @@ q
-        ORDER BY ts_rank(p.search_vector, q) DESC, p.published_at DESC NULLS LAST
+        SELECT *
+        FROM posts
+        WHERE status = 'published'
+          AND (title ILIKE $1 OR excerpt ILIKE $1 OR content_md ILIKE $1)
+        ORDER BY
+            CASE WHEN title ILIKE $1 THEN 0 ELSE 1 END,
+            published_at DESC NULLS LAST
         LIMIT $2 OFFSET $3
         "#,
     )
-    .bind(query)
+    .bind(&pattern)
     .bind(per_page)
     .bind(offset)
     .fetch_all(&state.db)
@@ -51,11 +58,12 @@ pub async fn search(
     let total: i64 = sqlx::query_scalar(
         r#"
         SELECT COUNT(*)
-        FROM posts p, websearch_to_tsquery('simple', $1) AS q
-        WHERE p.status = 'published' AND p.search_vector @@ q
+        FROM posts
+        WHERE status = 'published'
+          AND (title ILIKE $1 OR excerpt ILIKE $1 OR content_md ILIKE $1)
         "#,
     )
-    .bind(query)
+    .bind(&pattern)
     .fetch_one(&state.db)
     .await?;
 
@@ -73,6 +81,7 @@ pub async fn search(
                 views: p.views,
                 word_count: p.word_count,
                 reading_time_min: p.reading_time_min,
+                cover_image: p.cover_image,
                 published_at: p.published_at,
                 created_at: p.created_at,
                 tags,

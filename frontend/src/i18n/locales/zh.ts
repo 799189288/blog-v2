@@ -32,6 +32,7 @@ export default {
     related: '相关文章',
     toc: '目录',
     draftBanner: '草稿预览 — 这篇文章尚未公开发布。链接在文章发布之前可一直使用。',
+    backToTop: '回到顶部',
   },
   search: {
     title: '搜索',
@@ -41,6 +42,7 @@ export default {
     noResultsHint: '没有找到与"{q}"相关的文章，换个关键词试试。',
     emptyHint: '输入关键词并回车开始搜索。',
     resultsCount: '"{q}" 的结果，共 {n} 条',
+    trySuggestions: '试试：',
   },
   tag: {
     title: '标签：{slug}',

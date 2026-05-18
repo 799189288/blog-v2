@@ -15,6 +15,7 @@ pub struct Post {
     pub views: i64,
     pub word_count: i32,
     pub reading_time_min: i32,
+    pub cover_image: Option<String>,
     pub preview_token: Option<String>,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
@@ -34,6 +35,7 @@ pub struct PostSummary {
     pub views: i64,
     pub word_count: i32,
     pub reading_time_min: i32,
+    pub cover_image: Option<String>,
     #[serde(with = "time::serde::rfc3339::option")]
     pub published_at: Option<OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339")]
@@ -53,6 +55,7 @@ pub struct PostDetail {
     pub views: i64,
     pub word_count: i32,
     pub reading_time_min: i32,
+    pub cover_image: Option<String>,
     /// Present on drafts so the admin UI can render a private preview
     /// link. Always None for published posts.
     pub preview_token: Option<String>,

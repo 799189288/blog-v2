@@ -1,4 +1,4 @@
-use axum::{Json, extract::{ConnectInfo, State}};
+use axum::{Json, extract::{ConnectInfo, State}, http::HeaderMap};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
@@ -32,8 +32,17 @@ pub struct UserOut {
 pub async fn login(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(input): Json<LoginInput>,
 ) -> AppResult<Json<LoginResponse>> {
+    let ip = client_ip(&headers, addr);
+
+    if state.login_locked(&ip) {
+        return Err(AppError::BadRequest(
+            "too many failed login attempts, please try again later".into(),
+        ));
+    }
+
     if input.username.is_empty() || input.password.is_empty() {
         return Err(AppError::BadRequest(
             "username and password are required".into(),
@@ -45,12 +54,23 @@ pub async fn login(
     )
     .bind(&input.username)
     .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::Unauthorized)?;
+    .await?;
 
-    if !password::verify(&input.password, &user.password_hash) {
-        return Err(AppError::Unauthorized);
-    }
+    // Verify password. On any failure (user not found or wrong password)
+    // record the attempt and return a generic Unauthorized — never reveal
+    // which of the two failed.
+    let user = match user {
+        Some(u) if password::verify(&input.password, &u.password_hash) => u,
+        _ => {
+            let locked = state.record_login_failure(&ip);
+            if locked {
+                tracing::warn!(ip = %ip, "login lockout triggered");
+            }
+            return Err(AppError::Unauthorized);
+        }
+    };
+
+    state.clear_login_failures(&ip);
 
     let token = jwt::issue(&state.jwt_secret, user.id, &user.username, &user.role)
         .map_err(AppError::Internal)?;
@@ -79,4 +99,14 @@ pub async fn login(
             role: user.role,
         },
     }))
+}
+
+fn client_ip(headers: &HeaderMap, addr: SocketAddr) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| addr.ip().to_string())
 }

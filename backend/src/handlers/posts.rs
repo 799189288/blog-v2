@@ -107,6 +107,7 @@ pub async fn list_published(
                 views: p.views,
                 word_count: p.word_count,
                 reading_time_min: p.reading_time_min,
+                cover_image: p.cover_image,
                 published_at: p.published_at,
                 created_at: p.created_at,
                 tags,
@@ -192,6 +193,7 @@ pub async fn get_by_slug(
         views: post.views,
         word_count: post.word_count,
         reading_time_min: post.reading_time_min,
+        cover_image: post.cover_image,
         // Don't leak the token back through the public response — readers
         // get URL-only access; the admin path returns it separately.
         preview_token: None,

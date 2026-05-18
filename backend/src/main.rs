@@ -6,6 +6,7 @@ mod handlers;
 mod markdown;
 mod models;
 mod notify;
+mod rate_limit;
 mod routes;
 mod state;
 

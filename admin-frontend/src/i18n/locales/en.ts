@@ -141,6 +141,8 @@ export default {
   managePosts: {
     title: 'Posts',
     newPost: 'New post',
+    searchPlaceholder: 'Search title...',
+    statusPlaceholder: 'Status',
     cols: {
       title: 'Title',
       status: 'Status',
@@ -152,6 +154,7 @@ export default {
     deleteTitle: 'Delete post',
     deleteConfirm: 'Delete "{title}"? This cannot be undone.',
     deleted: 'Post deleted',
+    noResults: 'No matching posts',
   },
   postEdit: {
     titleEdit: 'Edit post',
@@ -190,6 +193,7 @@ export default {
     cols: {
       author: 'Author',
       email: 'Email',
+      post: 'Post',
       replyTo: 'Reply to',
       content: 'Content',
       status: 'Status',

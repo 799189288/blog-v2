@@ -10,7 +10,7 @@ import { NMenu, NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import {
   StatsChartOutline, DocumentTextOutline, ChatbubbleOutline,
-  PricetagsOutline, PeopleOutline, PersonCircleOutline, ListOutline,
+  PricetagsOutline, PersonCircleOutline, ListOutline,
   CreateOutline, BookOutline, SettingsOutline,
 } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
@@ -32,17 +32,6 @@ const menuOptions = computed<MenuOption[]>(() => [
       { label: () => h(RouterLink, { to: { name: 'manage-post-new' } }, () => t('menu.newPost')), key: 'manage-post-new', icon: icon(CreateOutline) },
       { label: () => h(RouterLink, { to: { name: 'manage-tags' } }, () => t('menu.tags')), key: 'manage-tags', icon: icon(PricetagsOutline) },
       { label: () => h(RouterLink, { to: { name: 'manage-comments' } }, () => t('menu.commentModeration')), key: 'manage-comments', icon: icon(ChatbubbleOutline) },
-    ],
-  },
-  {
-    label: t('menu.browseData'),
-    key: 'data',
-    icon: icon(ListOutline),
-    children: [
-      { label: () => h(RouterLink, { to: { name: 'data-posts' } }, () => t('menu.dataPosts')), key: 'data-posts', icon: icon(DocumentTextOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-comments' } }, () => t('menu.dataComments')), key: 'data-comments', icon: icon(ChatbubbleOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-tags' } }, () => t('menu.dataTags')), key: 'data-tags', icon: icon(PricetagsOutline) },
-      { label: () => h(RouterLink, { to: { name: 'data-users' } }, () => t('menu.dataUsers')), key: 'data-users', icon: icon(PeopleOutline) },
     ],
   },
   { label: () => h(RouterLink, { to: { name: 'users' } }, () => t('menu.userManagement')), key: 'users', icon: icon(PersonCircleOutline) },

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
-import { NDataTable, NTag, NButton, NSpace, useDialog, useMessage } from 'naive-ui'
+import { NDataTable, NTag, NButton, NSpace, NInput, NSelect, useDialog, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -20,6 +20,23 @@ const { isMobile } = useBreakpoint()
 
 const posts = ref<PostSummary[]>([])
 const loading = ref(false)
+const searchQ = ref('')
+const statusFilter = ref<string | null>(null)
+
+const statusOptions = computed(() => [
+  { label: t('postEdit.status.published'), value: 'published' },
+  { label: t('postEdit.status.draft'), value: 'draft' },
+])
+
+const filtered = computed(() => {
+  let list = posts.value
+  if (statusFilter.value) list = list.filter(p => p.status === statusFilter.value)
+  if (searchQ.value.trim()) {
+    const q = searchQ.value.trim().toLowerCase()
+    list = list.filter(p => p.title.toLowerCase().includes(q))
+  }
+  return list
+})
 
 async function load() {
   loading.value = true
@@ -93,15 +110,30 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
     <h2 class="page-title">{{ t('managePosts.title') }}</h2>
     <NButton type="primary" @click="router.push({ name: 'manage-post-new' })">{{ t('managePosts.newPost') }}</NButton>
   </div>
+  <div class="filter-row">
+    <NInput
+      v-model:value="searchQ"
+      :placeholder="t('managePosts.searchPlaceholder')"
+      clearable
+      class="filter-input"
+    />
+    <NSelect
+      v-model:value="statusFilter"
+      :options="statusOptions"
+      :placeholder="t('managePosts.statusPlaceholder')"
+      class="filter-select"
+      clearable
+    />
+  </div>
   <NDataTable
     v-if="!isMobile"
     :columns="columns"
-    :data="posts"
+    :data="filtered"
     :loading="loading"
     :row-key="(r: PostSummary) => r.id"
   />
   <div v-else class="m-list">
-    <MobileRowCard v-for="p in posts" :key="p.id">
+    <MobileRowCard v-for="p in filtered" :key="p.id">
       <template #title>
         <RouterLink :to="{ name: 'manage-post-edit', params: { id: p.id } }" class="row-link">
           {{ p.title }}
@@ -143,10 +175,14 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
   gap: 8px;
 }
 .page-title { margin: 0; }
-/* RouterLink renders as <a>, which the UA paints in its default link
-   color (blue/purple, including :visited). That's invisible against the
-   dark theme. Inherit the surrounding theme text color and let Naive UI
-   decide the actual hue; underline on hover keeps the affordance. */
+.filter-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.filter-input { width: 220px; max-width: 100%; }
+.filter-select { width: 140px; max-width: 100%; }
 :deep(.row-link) {
   color: inherit;
   text-decoration: none;
@@ -167,4 +203,7 @@ const columns = computed<DataTableColumns<PostSummary>>(() => [
   align-items: center;
 }
 .muted { opacity: 0.7; font-size: 12px; }
+@media (max-width: 480px) {
+  .filter-input, .filter-select { width: 100%; }
+}
 </style>

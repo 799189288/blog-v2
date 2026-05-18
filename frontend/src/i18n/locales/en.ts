@@ -32,6 +32,7 @@ export default {
     related: 'Related posts',
     toc: 'Contents',
     draftBanner: 'Draft preview — this post is not public yet. The link will keep working until the post is published.',
+    backToTop: 'Back to top',
   },
   search: {
     title: 'Search',
@@ -41,6 +42,7 @@ export default {
     noResultsHint: 'No posts matched “{q}”. Try a different keyword.',
     emptyHint: 'Type a keyword and press Enter to search.',
     resultsCount: '{n} results for “{q}”',
+    trySuggestions: 'Try:',
   },
   tag: {
     title: 'Tag: {slug}',

@@ -27,6 +27,8 @@ pub struct ListQuery {
 pub struct AdminCommentRow {
     pub id: i64,
     pub post_id: i64,
+    pub post_title: String,
+    pub post_slug: String,
     pub parent_id: Option<i64>,
     pub parent_author_name: Option<String>,
     pub author_name: String,
@@ -48,10 +50,12 @@ pub async fn list(
         }
         sqlx::query_as::<_, AdminCommentRow>(
             r#"
-            SELECT c.id, c.post_id, c.parent_id, p.author_name AS parent_author_name,
+            SELECT c.id, c.post_id, po.title AS post_title, po.slug AS post_slug,
+                   c.parent_id, p.author_name AS parent_author_name,
                    c.author_name, c.author_email, c.content, c.status, c.created_at
             FROM comments c
             LEFT JOIN comments p ON p.id = c.parent_id
+            LEFT JOIN posts po ON po.id = c.post_id
             WHERE c.status = $1
             ORDER BY c.created_at DESC
             "#,
@@ -62,10 +66,12 @@ pub async fn list(
     } else {
         sqlx::query_as::<_, AdminCommentRow>(
             r#"
-            SELECT c.id, c.post_id, c.parent_id, p.author_name AS parent_author_name,
+            SELECT c.id, c.post_id, po.title AS post_title, po.slug AS post_slug,
+                   c.parent_id, p.author_name AS parent_author_name,
                    c.author_name, c.author_email, c.content, c.status, c.created_at
             FROM comments c
             LEFT JOIN comments p ON p.id = c.parent_id
+            LEFT JOIN posts po ON po.id = c.post_id
             ORDER BY c.created_at DESC
             "#,
         )

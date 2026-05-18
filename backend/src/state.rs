@@ -15,6 +15,19 @@ const VIEW_DEDUPE_CLEANUP_THRESHOLD: usize = 10_000;
 const COMMENT_RATE_WINDOW: Duration = Duration::from_secs(30);
 const COMMENT_DEDUPE_CLEANUP_THRESHOLD: usize = 10_000;
 
+/// Login brute-force protection: 5 failures within LOGIN_FAIL_WINDOW
+/// triggers a LOGIN_LOCKOUT_DURATION ban for that IP.
+const LOGIN_FAIL_WINDOW: Duration = Duration::from_secs(60);
+const LOGIN_MAX_FAILURES: u32 = 5;
+const LOGIN_LOCKOUT_DURATION: Duration = Duration::from_secs(15 * 60);
+
+#[derive(Debug)]
+struct LoginRecord {
+    failures: u32,
+    window_start: Instant,
+    locked_until: Option<Instant>,
+}
+
 #[derive(Clone, Debug)]
 pub struct SiteInfo {
     pub url: String,
@@ -46,6 +59,8 @@ pub struct AppState {
     view_dedupe: Arc<Mutex<HashMap<String, Instant>>>,
     /// In-memory per-IP last-comment timestamp for rate limiting.
     comment_dedupe: Arc<Mutex<HashMap<String, Instant>>>,
+    /// Per-IP login failure tracking for brute-force lockout.
+    login_failures: Arc<Mutex<HashMap<String, LoginRecord>>>,
 }
 
 impl AppState {
@@ -67,6 +82,7 @@ impl AppState {
             dict_cache: Arc::new(RwLock::new(HashMap::new())),
             view_dedupe: Arc::new(Mutex::new(HashMap::new())),
             comment_dedupe: Arc::new(Mutex::new(HashMap::new())),
+            login_failures: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -115,5 +131,47 @@ impl AppState {
     pub fn record_comment(&self, ip: &str) {
         let mut map = self.comment_dedupe.lock().expect("comment_dedupe poisoned");
         map.insert(ip.to_string(), Instant::now());
+    }
+
+    /// Returns `true` if the IP is currently locked out from login attempts.
+    pub fn login_locked(&self, ip: &str) -> bool {
+        let now = Instant::now();
+        let map = self.login_failures.lock().expect("login_failures poisoned");
+        if let Some(rec) = map.get(ip) {
+            if let Some(until) = rec.locked_until {
+                return now < until;
+            }
+        }
+        false
+    }
+
+    /// Record a failed login attempt. Returns `true` if this attempt
+    /// triggered a new lockout (so the caller can log it).
+    pub fn record_login_failure(&self, ip: &str) -> bool {
+        let now = Instant::now();
+        let mut map = self.login_failures.lock().expect("login_failures poisoned");
+        let rec = map.entry(ip.to_string()).or_insert(LoginRecord {
+            failures: 0,
+            window_start: now,
+            locked_until: None,
+        });
+        // Reset counter if the failure window has expired.
+        if now.duration_since(rec.window_start) >= LOGIN_FAIL_WINDOW {
+            rec.failures = 0;
+            rec.window_start = now;
+            rec.locked_until = None;
+        }
+        rec.failures += 1;
+        if rec.failures >= LOGIN_MAX_FAILURES {
+            rec.locked_until = Some(now + LOGIN_LOCKOUT_DURATION);
+            return true;
+        }
+        false
+    }
+
+    /// Clear the failure record for an IP on successful login.
+    pub fn clear_login_failures(&self, ip: &str) {
+        let mut map = self.login_failures.lock().expect("login_failures poisoned");
+        map.remove(ip);
     }
 }

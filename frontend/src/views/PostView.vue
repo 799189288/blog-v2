@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { NSpin, NTag, NSpace, NDivider } from 'naive-ui'
 import { RouterLink, useRoute } from 'vue-router'
 import { MdPreview, MdCatalog, config } from 'md-editor-v3'
@@ -98,9 +98,30 @@ useHead(() => ({
 async function reloadComments() {
   comments.value = await commentsApi.listApproved(props.slug)
 }
+
+// ── Reading progress + back-to-top ──────────────────────────────────────────
+const scrollProgress = ref(0)
+const showBackTop = ref(false)
+
+function onScroll() {
+  const scrolled = window.scrollY
+  const total = document.documentElement.scrollHeight - window.innerHeight
+  scrollProgress.value = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0
+  showBackTop.value = scrolled > window.innerHeight * 0.8
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
+  <!-- Reading progress bar fixed at top of viewport -->
+  <div class="read-progress" :style="{ width: scrollProgress + '%' }" aria-hidden="true" />
+
   <div class="post-layout">
     <div class="post-main">
       <NSpin :show="loading">
@@ -203,9 +224,64 @@ async function reloadComments() {
       </div>
     </aside>
   </div>
+
+  <!-- Back to top -->
+  <Transition name="backtop">
+    <button
+      v-if="showBackTop"
+      class="back-top"
+      :aria-label="$t('post.backToTop')"
+      @click="scrollToTop"
+    >↑</button>
+  </Transition>
 </template>
 
 <style scoped>
+/* ── Reading progress bar ─────────────────────────────────────────────────── */
+.read-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand-color, #c0392b);
+  z-index: 1000;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+/* ── Back to top button ───────────────────────────────────────────────────── */
+.back-top {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  background: var(--n-card-color, rgba(255,255,255,0.9));
+  backdrop-filter: blur(6px);
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.back-top:hover {
+  border-color: var(--brand-color, #c0392b);
+  color: var(--brand-color, #c0392b);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.backtop-enter-active, .backtop-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.backtop-enter-from, .backtop-leave-to { opacity: 0; transform: translateY(8px); }
+
+@media (max-width: 480px) {
+  .back-top { bottom: 20px; right: 16px; width: 36px; height: 36px; font-size: 14px; }
+}
 .post-layout {
   /* Single column — the TOC is `position: fixed` and sits to the right
      of the content-wrap as an overlay, so we don't reserve a grid cell
@@ -337,6 +413,16 @@ async function reloadComments() {
   padding: 14px 16px;
   font-size: 13px;
   line-height: 1.55;
+}
+/* Dark mode: boost code block background so text is readable */
+:global(.dark) .post-md-preview :deep(pre),
+:global([data-theme="dark"]) .post-md-preview :deep(pre) {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+:global(.dark) .post-md-preview :deep(:not(pre) > code),
+:global([data-theme="dark"]) .post-md-preview :deep(:not(pre) > code) {
+  background: rgba(255, 255, 255, 0.1);
 }
 .post-md-preview :deep(pre code) {
   font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;

@@ -17,6 +17,7 @@ export interface PostSummary {
   views: number
   word_count: number
   reading_time_min: number
+  cover_image: string | null
   published_at: string | null
   created_at: string
   tags: Tag[]

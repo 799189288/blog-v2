@@ -1,55 +1,78 @@
 <script setup lang="ts">
-import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NInput, NDropdown } from 'naive-ui'
-import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { setLocale, type Locale } from '../i18n'
-import { useTheme, type ThemeMode } from '../composables/useTheme'
-import { useBreakpoint } from '../composables/useBreakpoint'
+import { RouterLink, RouterView, useRouter } from "vue-router";
+import {
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NLayoutFooter,
+  NInput,
+  NDropdown,
+  NButton,
+} from "naive-ui";
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { setLocale, type Locale } from "../i18n";
+import { useTheme, type ThemeMode } from "../composables/useTheme";
+import { useBreakpoint } from "../composables/useBreakpoint";
 
-const router = useRouter()
-const query = ref('')
-const { t, locale } = useI18n()
-const { mode: themeMode, cycle: cycleTheme } = useTheme()
-const { isNarrow } = useBreakpoint()
+const router = useRouter();
+const query = ref("");
+const { t, locale } = useI18n();
+const { mode: themeMode, cycle: cycleTheme } = useTheme();
+const { isNarrow } = useBreakpoint();
 
 function onSearch() {
-  const q = query.value.trim()
-  if (q) router.push({ name: 'search', query: { q } })
+  const q = query.value.trim();
+  if (q) router.push({ name: "search", query: { q } });
 }
 
 const langOptions = computed(() => [
-  { key: 'en', label: t('language.en') },
-  { key: 'zh', label: t('language.zh') },
-])
+  { key: "en", label: t("language.en") },
+  { key: "zh", label: t("language.zh") },
+]);
 
-const currentLangLabel = computed(() => (locale.value === 'zh' ? t('language.zh') : t('language.en')))
+const currentLangLabel = computed(() =>
+  locale.value === "zh" ? t("language.zh") : t("language.en"),
+);
 
 function onLangSelect(key: string) {
-  setLocale(key as Locale)
+  setLocale(key as Locale);
 }
 
 // Short label per state. The `title` attr still gets the long
 // description plus the "click to switch" hint.
 const themeLabel = computed(() => {
-  const m: ThemeMode = themeMode.value
-  return t(`theme.${m}Short`)
-})
+  const m: ThemeMode = themeMode.value;
+  return t(`theme.${m}Short`);
+});
 const themeTitle = computed(() => {
-  const m: ThemeMode = themeMode.value
-  return t(`theme.${m}`) + ' — ' + t('theme.clickToCycle')
-})
+  const m: ThemeMode = themeMode.value;
+  return t(`theme.${m}`) + " — " + t("theme.clickToCycle");
+});
 </script>
 
 <template>
   <NLayout class="root-layout">
-    <NLayoutHeader bordered style="padding: 14px 24px;">
+    <NLayoutHeader bordered style="padding: 14px 24px">
       <div class="header-inner">
         <div class="header-left">
-          <RouterLink :to="{ name: 'home' }" class="brand">{{ t('layout.brand') }}</RouterLink>
+          <RouterLink :to="{ name: 'home' }" class="brand">{{
+            t("layout.brand")
+          }}</RouterLink>
           <nav class="nav">
-            <RouterLink :to="{ name: 'home' }" class="nav-link" :exact-active-class="'is-active'" active-class="">{{ t('layout.home') }}</RouterLink>
-            <RouterLink :to="{ name: 'archive' }" class="nav-link" active-class="is-active">{{ t('layout.archive') }}</RouterLink>
+            <RouterLink
+              :to="{ name: 'home' }"
+              class="nav-link"
+              :exact-active-class="'is-active'"
+              active-class=""
+              >{{ t("layout.home") }}</RouterLink
+            >
+            <RouterLink
+              :to="{ name: 'archive' }"
+              class="nav-link"
+              active-class="is-active"
+              >{{ t("layout.archive") }}</RouterLink
+            >
           </nav>
         </div>
         <div class="header-right">
@@ -68,30 +91,37 @@ const themeTitle = computed(() => {
             class="search-link"
             :title="t('layout.searchPlaceholder')"
             :aria-label="t('layout.searchPlaceholder')"
-          >{{ t('common.search') }}</RouterLink>
-          <button
-            type="button"
+            >{{ t("common.search") }}</RouterLink
+          >
+          <NButton
             class="theme-btn"
             :title="themeTitle"
             :aria-label="themeTitle"
             @click="cycleTheme"
           >
             {{ themeLabel }}
-          </button>
-          <NDropdown trigger="click" :options="langOptions" @select="onLangSelect">
-            <button type="button" class="lang-btn">{{ currentLangLabel }} ▾</button>
+          </NButton>
+          <NDropdown
+            trigger="click"
+            :options="langOptions"
+            @select="onLangSelect"
+          >
+            <NButton class="lang-btn">{{ currentLangLabel }} ▾</NButton>
           </NDropdown>
         </div>
       </div>
     </NLayoutHeader>
 
-    <NLayoutContent class="main-content" style="padding: 32px 24px;">
+    <NLayoutContent class="main-content" style="padding: 32px 24px">
       <div class="content-wrap">
         <RouterView />
       </div>
     </NLayoutContent>
 
-    <NLayoutFooter bordered style="padding: 16px 24px; text-align: center; font-size: 14px;">
+    <NLayoutFooter
+      bordered
+      style="padding: 16px 24px; text-align: center; font-size: 14px"
+    >
       &copy; {{ new Date().getFullYear() }} Leo
     </NLayoutFooter>
   </NLayout>
@@ -141,9 +171,11 @@ const themeTitle = computed(() => {
   color: inherit;
   font-size: 13px;
 }
-.search-link:hover { border-color: rgba(127, 127, 127, 0.6); }
+.search-link:hover {
+  border-color: rgba(127, 127, 127, 0.6);
+}
 .brand {
-  font-family: 'EB Garamond', 'Noto Serif SC', Georgia, serif;
+  font-family: "EB Garamond", "Noto Serif SC", Georgia, serif;
   font-weight: 600;
   font-size: 20px;
   text-decoration: none;
@@ -163,9 +195,13 @@ const themeTitle = computed(() => {
   font-size: 14px;
   opacity: 0.65;
   color: inherit;
-  transition: opacity 0.15s, color 0.15s;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
 }
-.nav-link:hover { opacity: 1; }
+.nav-link:hover {
+  opacity: 1;
+}
 .nav-link.is-active {
   opacity: 1;
   color: var(--brand-color, #c0392b);
@@ -191,16 +227,34 @@ const themeTitle = computed(() => {
 }
 
 @media (max-width: 768px) {
-  .header-inner { gap: 10px; }
-  .header-left { gap: 12px; }
-  .brand { font-size: 16px; }
-  .main-content { padding: 20px 16px !important; }
-  :deep(.n-layout-header) { padding: 10px 14px !important; }
-  :deep(.n-layout-footer) { padding: 12px 14px !important; }
+  .header-inner {
+    gap: 10px;
+  }
+  .header-left {
+    gap: 12px;
+  }
+  .brand {
+    font-size: 16px;
+  }
+  .main-content {
+    padding: 20px 16px !important;
+  }
+  :deep(.n-layout-header) {
+    padding: 10px 14px !important;
+  }
+  :deep(.n-layout-footer) {
+    padding: 12px 14px !important;
+  }
 }
 @media (max-width: 480px) {
-  .header-right { gap: 8px; }
-  .nav-link { font-size: 13px; }
-  .main-content { padding: 16px 12px !important; }
+  .header-right {
+    gap: 8px;
+  }
+  .nav-link {
+    font-size: 13px;
+  }
+  .main-content {
+    padding: 16px 12px !important;
+  }
 }
 </style>

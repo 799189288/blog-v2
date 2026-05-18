@@ -141,6 +141,8 @@ export default {
   managePosts: {
     title: '文章列表',
     newPost: '新建文章',
+    searchPlaceholder: '搜索标题...',
+    statusPlaceholder: '状态',
     cols: {
       title: '标题',
       status: '状态',
@@ -152,6 +154,7 @@ export default {
     deleteTitle: '删除文章',
     deleteConfirm: '确定删除 "{title}"？此操作不可撤销。',
     deleted: '文章已删除',
+    noResults: '没有匹配的文章',
   },
   postEdit: {
     titleEdit: '编辑文章',
@@ -190,6 +193,7 @@ export default {
     cols: {
       author: '作者',
       email: '邮箱',
+      post: '所属文章',
       replyTo: '回复',
       content: '内容',
       status: '状态',

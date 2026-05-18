@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use axum::{
     Router,
@@ -8,15 +9,18 @@ use axum::{
     routing::{delete, get, patch, post, put},
 };
 use tower_http::{
-    compression::CompressionLayer,
-    cors::CorsLayer,
-    services::{ServeDir, ServeFile},
-    trace::TraceLayer,
+    compression::CompressionLayer, cors::CorsLayer, services::{ServeDir, ServeFile}, timeout::TimeoutLayer, trace::TraceLayer
 };
 
-use crate::{auth::require_admin, config::Config, handlers, state::AppState};
+use crate::{auth::require_admin, config::Config, handlers, rate_limit::IpRateLimit, state::AppState};
 
 pub fn build(state: AppState, config: &Config) -> Router {
+    // 120 requests per minute per IP across all API routes.
+    let rl = IpRateLimit::new(120, Duration::from_secs(60));
+    let governor_layer = middleware::from_fn(move |req, next| {
+        let rl = rl.clone();
+        crate::rate_limit::api_rate_limit(req, next, rl)
+    });
     let public = Router::new()
         .route("/posts", get(handlers::posts::list_published))
         .route("/posts/archive", get(handlers::posts::archive))
@@ -87,6 +91,7 @@ pub fn build(state: AppState, config: &Config) -> Router {
     let api = Router::new()
         .merge(public)
         .nest("/admin", admin)
+        .layer(governor_layer)
         .with_state(state.clone());
 
     // Feeds live at the site root (RSS readers expect /rss.xml).
@@ -111,6 +116,10 @@ pub fn build(state: AppState, config: &Config) -> Router {
         .merge(upload_files)
         .layer(cors)
         .layer(CompressionLayer::new())
+        .layer(TimeoutLayer::with_status_code(
+            axum::http::StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(30),
+        ))
         .layer(TraceLayer::new_for_http());
 
     if let Some(dir) = &config.static_dir {

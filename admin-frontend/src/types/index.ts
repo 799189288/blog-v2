@@ -155,6 +155,8 @@ export interface PostInput {
 export interface Comment {
   id: number
   post_id: number
+  post_title: string
+  post_slug: string
   parent_id: number | null
   parent_author_name: string | null
   author_name: string
