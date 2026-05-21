@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { NInput, NButton, NSpin, NPagination } from 'naive-ui'
+import { computed, onMounted, ref, watch } from 'vue'
+import { NInput, NButton, NSpin, NPagination, NEmpty } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import * as postsApi from '../api/posts'
+import * as tagsApi from '../api/tags'
 import { useHead } from '../composables/useHead'
-import type { PostSummary } from '../types'
+import type { PostSummary, TagWithCount } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,10 +21,24 @@ const perPage = 10
 const total = ref(0)
 const posts = ref<PostSummary[]>([])
 const loading = ref(false)
+const error = ref(false)
+const topTags = ref<TagWithCount[]>([])
 
 const hasSubmitted = computed(() => submittedQ.value.trim().length > 0)
 const hasResults = computed(() => hasSubmitted.value && posts.value.length > 0)
 const isEmptyResult = computed(() => hasSubmitted.value && !loading.value && posts.value.length === 0)
+
+onMounted(async () => {
+  try {
+    const tags = await tagsApi.list()
+    topTags.value = tags
+      .filter(t => t.post_count > 0)
+      .sort((a, b) => b.post_count - a.post_count)
+      .slice(0, 6)
+  } catch {
+    // suggestions are non-critical, ignore errors
+  }
+})
 
 async function load() {
   const term = q.value.trim()
@@ -34,10 +49,15 @@ async function load() {
     return
   }
   loading.value = true
+  error.value = false
   try {
     const res = await postsApi.search(term, page.value)
     posts.value = res.items
     total.value = res.total
+  } catch {
+    error.value = true
+    posts.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -55,8 +75,6 @@ watch(() => route.query.q, val => {
   load()
 }, { immediate: true })
 
-// Highlight all occurrences of `keyword` inside `text`, wrapping them in <mark>.
-// The keyword is escaped so special regex chars in user input don't throw.
 function highlight(text: string, keyword: string): string {
   if (!keyword.trim()) return escapeHtml(text)
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -71,9 +89,6 @@ function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 }
-
-// Suggested keywords shown on the empty-result state.
-const suggestions = ['Rust', 'TypeScript', 'Vue', 'Linux', 'Docker']
 
 function searchSuggestion(word: string) {
   q.value = word
@@ -106,7 +121,9 @@ function searchSuggestion(word: string) {
     </header>
 
     <NSpin :show="loading">
-      <template v-if="hasResults">
+      <NEmpty v-if="error" :description="$t('common.loadError')" style="padding: 60px 0" />
+
+      <template v-else-if="hasResults">
         <article v-for="p in posts" :key="p.id" class="result-card">
           <h2 class="result-title">
             <RouterLink :to="{ name: 'post', params: { slug: p.slug } }">
@@ -132,14 +149,14 @@ function searchSuggestion(word: string) {
       <div v-else-if="isEmptyResult" class="state-empty">
         <div class="state-icon" aria-hidden="true">∅</div>
         <p class="state-text">{{ t('search.noResultsHint', { q: submittedQ }) }}</p>
-        <div class="suggestions">
+        <div v-if="topTags.length" class="suggestions">
           <span class="suggestions-label">{{ t('search.trySuggestions') }}</span>
           <button
-            v-for="word in suggestions"
-            :key="word"
+            v-for="tag in topTags"
+            :key="tag.id"
             class="suggestion-chip"
-            @click="searchSuggestion(word)"
-          >{{ word }}</button>
+            @click="searchSuggestion(tag.name)"
+          >{{ tag.name }}</button>
         </div>
       </div>
 

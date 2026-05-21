@@ -187,6 +187,8 @@ pub async fn create(
 
     tx.commit().await?;
 
+    state.invalidate_archive_cache().await;
+
     audit::record(
         &state.db,
         &user,
@@ -315,6 +317,8 @@ pub async fn update(
 
     tx.commit().await?;
 
+    state.invalidate_archive_cache().await;
+
     audit::record(
         &state.db,
         &user,
@@ -368,6 +372,8 @@ pub async fn delete(
         .bind(id)
         .execute(&state.db)
         .await?;
+
+    state.invalidate_archive_cache().await;
 
     audit::record(
         &state.db,

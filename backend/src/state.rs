@@ -5,21 +5,20 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 use crate::models::dict::DictItemPublic;
+use crate::handlers::posts::ArchiveGroup;
 use crate::notify::Notifier;
 
 const VIEW_DEDUPE_TTL: Duration = Duration::from_secs(30 * 60);
 const VIEW_DEDUPE_CLEANUP_THRESHOLD: usize = 10_000;
 
-/// Minimum gap between comments from the same IP. Anything closer
-/// is rate-limited away before it hits the database.
 const COMMENT_RATE_WINDOW: Duration = Duration::from_secs(30);
 const COMMENT_DEDUPE_CLEANUP_THRESHOLD: usize = 10_000;
 
-/// Login brute-force protection: 5 failures within LOGIN_FAIL_WINDOW
-/// triggers a LOGIN_LOCKOUT_DURATION ban for that IP.
 const LOGIN_FAIL_WINDOW: Duration = Duration::from_secs(60);
 const LOGIN_MAX_FAILURES: u32 = 5;
 const LOGIN_LOCKOUT_DURATION: Duration = Duration::from_secs(15 * 60);
+
+const ARCHIVE_CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Debug)]
 struct LoginRecord {
@@ -54,6 +53,8 @@ pub struct AppState {
     pub notifier: Option<Notifier>,
     /// Per-type cache of enabled dict items. Cleared on any admin write.
     pub dict_cache: Arc<RwLock<HashMap<String, Arc<Vec<DictItemPublic>>>>>,
+    /// Cached archive response. Invalidated when a post is published or updated.
+    pub archive_cache: Arc<RwLock<Option<(Instant, Arc<Vec<ArchiveGroup>>)>>>,
     /// In-memory dedupe of recent post views, keyed by "slug|ip".
     /// Prevents the views counter from inflating on refresh.
     view_dedupe: Arc<Mutex<HashMap<String, Instant>>>,
@@ -80,6 +81,7 @@ impl AppState {
             comment_blocklist: Arc::new(comment_blocklist),
             notifier,
             dict_cache: Arc::new(RwLock::new(HashMap::new())),
+            archive_cache: Arc::new(RwLock::new(None)),
             view_dedupe: Arc::new(Mutex::new(HashMap::new())),
             comment_dedupe: Arc::new(Mutex::new(HashMap::new())),
             login_failures: Arc::new(Mutex::new(HashMap::new())),
@@ -92,6 +94,24 @@ impl AppState {
 
     pub async fn invalidate_dict_type(&self, type_code: &str) {
         self.dict_cache.write().await.remove(type_code);
+    }
+
+    pub async fn invalidate_archive_cache(&self) {
+        *self.archive_cache.write().await = None;
+    }
+
+    pub async fn get_archive_cache(&self) -> Option<Arc<Vec<ArchiveGroup>>> {
+        let guard = self.archive_cache.read().await;
+        if let Some((cached_at, data)) = guard.as_ref() {
+            if cached_at.elapsed() < ARCHIVE_CACHE_TTL {
+                return Some(Arc::clone(data));
+            }
+        }
+        None
+    }
+
+    pub async fn set_archive_cache(&self, data: Vec<ArchiveGroup>) {
+        *self.archive_cache.write().await = Some((Instant::now(), Arc::new(data)));
     }
 
     /// Returns true if this view should be counted (not seen recently from same IP).

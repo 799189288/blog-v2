@@ -304,7 +304,7 @@ pub async fn related(
     }))
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ArchiveEntry {
     pub slug: String,
     pub title: String,
@@ -312,7 +312,7 @@ pub struct ArchiveEntry {
     pub published_at: OffsetDateTime,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ArchiveGroup {
     /// "2026-05" — string keyed because clients sort + dedupe in render.
     pub year_month: String,
@@ -326,6 +326,10 @@ pub struct ArchiveGroup {
 /// table (this is a personal blog; even a few thousand posts is trivial)
 /// so we don't bother paginating.
 pub async fn archive(State(state): State<AppState>) -> AppResult<Json<Vec<ArchiveGroup>>> {
+    if let Some(cached) = state.get_archive_cache().await {
+        return Ok(Json((*cached).clone()));
+    }
+
     let rows = sqlx::query_as::<_, (String, String, OffsetDateTime)>(
         r#"
         SELECT slug, title, published_at
@@ -358,6 +362,7 @@ pub async fn archive(State(state): State<AppState>) -> AppResult<Json<Vec<Archiv
         }
     }
 
+    state.set_archive_cache(groups.clone()).await;
     Ok(Json(groups))
 }
 
