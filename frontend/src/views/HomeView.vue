@@ -18,14 +18,18 @@ const total = ref(0)
 const page = ref(1)
 const perPage = 10
 const loading = ref(false)
+const error = ref(false)
 const tags = ref<TagWithCount[]>([])
 
 async function load() {
   loading.value = true
+  error.value = false
   try {
     const res = await postsApi.listPublished({ page: page.value, per_page: perPage })
     posts.value = res.items
     total.value = res.total
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
@@ -54,7 +58,8 @@ const tagFontSize = computed(() => {
   <div class="home">
     <div class="posts">
       <NSpin :show="loading">
-        <NEmpty v-if="!loading && posts.length === 0" :description="$t('home.emptyPosts')" />
+        <NEmpty v-if="error" :description="$t('common.loadError')" />
+        <NEmpty v-else-if="!loading && posts.length === 0" :description="$t('home.emptyPosts')" />
         <PostCard v-for="p in posts" :key="p.id" :post="p" />
         <div v-if="total > perPage" style="display: flex; justify-content: center; margin-top: 24px;">
           <NPagination

@@ -1,8 +1,8 @@
 use axum::{
     Json,
-    extract::{ConnectInfo, Path, State},
+    extract::{ConnectInfo, Path, Query, State},
 };
-use serde::Serialize;
+use serde::Deserialize;
 use serde_json::json;
 use std::net::SocketAddr;
 use time::OffsetDateTime;
@@ -12,6 +12,7 @@ use crate::{
     audit,
     auth::AuthUser,
     error::{AppError, AppResult},
+    handlers::posts::Paginated,
     markdown,
     models::{
         post::{CreatePostInput, Post, PostDetail, PostSummary, UpdatePostInput},
@@ -22,22 +23,25 @@ use crate::{
 
 use super::posts::{load_tags_for_post, load_tags_for_posts};
 
-/// Generate a fresh preview token. We use uuid v4's hex form (32 chars,
-/// 128 bits) — plenty of entropy to make guessing infeasible, and it
-/// fits cleanly into a URL without escaping.
 fn gen_preview_token() -> String {
     uuid::Uuid::new_v4().simple().to_string()
 }
 
-#[derive(Debug, Serialize)]
-pub struct AdminPostsResponse {
-    pub items: Vec<PostSummary>,
+#[derive(Debug, Deserialize)]
+pub struct AdminListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
 }
 
 pub async fn list_all(
     State(state): State<AppState>,
     _user: AuthUser,
-) -> AppResult<Json<AdminPostsResponse>> {
+    Query(q): Query<AdminListQuery>,
+) -> AppResult<Json<Paginated<PostSummary>>> {
+    let page = q.page.unwrap_or(1).max(1);
+    let per_page = q.per_page.unwrap_or(20).clamp(1, 100);
+    let offset = (page - 1) * per_page;
+
     let rows = sqlx::query_as::<_, Post>(
         r#"
         SELECT * FROM posts
@@ -45,10 +49,17 @@ pub async fn list_all(
             CASE WHEN status = 'draft' THEN 0 ELSE 1 END,
             COALESCE(published_at, updated_at) DESC,
             id DESC
+        LIMIT $1 OFFSET $2
         "#,
     )
+    .bind(per_page)
+    .bind(offset)
     .fetch_all(&state.db)
     .await?;
+
+    let total: i64 = sqlx::query_scalar(r#"SELECT COUNT(*) FROM posts"#)
+        .fetch_one(&state.db)
+        .await?;
 
     let tags_by_post = load_tags_for_posts(&state, &rows).await?;
     let items = rows
@@ -71,7 +82,7 @@ pub async fn list_all(
             }
         })
         .collect();
-    Ok(Json(AdminPostsResponse { items }))
+    Ok(Json(Paginated { items, page, per_page, total }))
 }
 
 pub async fn get_by_id(

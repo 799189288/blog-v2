@@ -3,6 +3,7 @@ export default {
     submit: 'Submit',
     search: 'Search',
     cancel: 'Cancel',
+    loadError: 'Failed to load. Please try again later.',
   },
   layout: {
     brand: "Leo's Notes",

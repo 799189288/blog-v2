@@ -3,6 +3,7 @@ export default {
     submit: '提交',
     search: '搜索',
     cancel: '取消',
+    loadError: '加载失败，请稍后重试。',
   },
   layout: {
     brand: 'Leo 的笔记',

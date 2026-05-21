@@ -14,6 +14,7 @@ use crate::{
     audit,
     auth::AuthUser,
     error::{AppError, AppResult},
+    handlers::posts::Paginated,
     models::comment::{Comment, UpdateCommentStatus},
     state::AppState,
 };
@@ -21,6 +22,8 @@ use crate::{
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
     pub status: Option<String>,
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
 }
 
 #[derive(Debug, Serialize, FromRow)]
@@ -43,12 +46,16 @@ pub async fn list(
     State(state): State<AppState>,
     _user: AuthUser,
     Query(q): Query<ListQuery>,
-) -> AppResult<Json<Vec<AdminCommentRow>>> {
-    let rows = if let Some(status) = q.status.as_deref() {
+) -> AppResult<Json<Paginated<AdminCommentRow>>> {
+    let page = q.page.unwrap_or(1).max(1);
+    let per_page = q.per_page.unwrap_or(20).clamp(1, 100);
+    let offset = (page - 1) * per_page;
+
+    let (rows, total) = if let Some(status) = q.status.as_deref() {
         if !["pending", "approved", "spam"].contains(&status) {
             return Err(AppError::BadRequest("invalid status filter".into()));
         }
-        sqlx::query_as::<_, AdminCommentRow>(
+        let rows = sqlx::query_as::<_, AdminCommentRow>(
             r#"
             SELECT c.id, c.post_id, po.title AS post_title, po.slug AS post_slug,
                    c.parent_id, p.author_name AS parent_author_name,
@@ -58,13 +65,23 @@ pub async fn list(
             LEFT JOIN posts po ON po.id = c.post_id
             WHERE c.status = $1
             ORDER BY c.created_at DESC
+            LIMIT $2 OFFSET $3
             "#,
         )
         .bind(status)
+        .bind(per_page)
+        .bind(offset)
         .fetch_all(&state.db)
-        .await?
+        .await?;
+
+        let total: i64 =
+            sqlx::query_scalar(r#"SELECT COUNT(*) FROM comments WHERE status = $1"#)
+                .bind(status)
+                .fetch_one(&state.db)
+                .await?;
+        (rows, total)
     } else {
-        sqlx::query_as::<_, AdminCommentRow>(
+        let rows = sqlx::query_as::<_, AdminCommentRow>(
             r#"
             SELECT c.id, c.post_id, po.title AS post_title, po.slug AS post_slug,
                    c.parent_id, p.author_name AS parent_author_name,
@@ -73,12 +90,21 @@ pub async fn list(
             LEFT JOIN comments p ON p.id = c.parent_id
             LEFT JOIN posts po ON po.id = c.post_id
             ORDER BY c.created_at DESC
+            LIMIT $1 OFFSET $2
             "#,
         )
+        .bind(per_page)
+        .bind(offset)
         .fetch_all(&state.db)
-        .await?
+        .await?;
+
+        let total: i64 = sqlx::query_scalar(r#"SELECT COUNT(*) FROM comments"#)
+            .fetch_one(&state.db)
+            .await?;
+        (rows, total)
     };
-    Ok(Json(rows))
+
+    Ok(Json(Paginated { items: rows, page, per_page, total }))
 }
 
 pub async fn set_status(
